@@ -38,13 +38,20 @@ function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
   }
 }
 
+// The store's round entries are Vue reactive proxies — structuredClone
+// can't clone those directly, so plain JSON round-trip both clones and
+// unwraps reactivity (TeamRoundEntry is plain JSON-safe data).
+function cloneEntry(entry: TeamRoundEntry): TeamRoundEntry {
+  return JSON.parse(JSON.stringify(entry))
+}
+
 const existingRound = isEdit.value ? game.value?.rounds[roundIndex.value] : undefined
 
 const entriesA = ref<TeamRoundEntry>(
-  existingRound ? structuredClone(existingRound.entries.A) : makeEmptyEntry(game.value?.partnership.A ?? []),
+  existingRound ? cloneEntry(existingRound.entries.A) : makeEmptyEntry(game.value?.partnership.A ?? []),
 )
 const entriesB = ref<TeamRoundEntry>(
-  existingRound ? structuredClone(existingRound.entries.B) : makeEmptyEntry(game.value?.partnership.B ?? []),
+  existingRound ? cloneEntry(existingRound.entries.B) : makeEmptyEntry(game.value?.partnership.B ?? []),
 )
 
 const breakdownA = computed(() => scoreRound(entriesA.value))
