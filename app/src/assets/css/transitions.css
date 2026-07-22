@@ -22,12 +22,21 @@
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Recipe 3 — reduced motion: kill everything. */
+/* Recipe 3 — reduced motion: kill everything, including the Recipe 4
+   list transitions below (prefers-reduced-motion only silences CSS
+   animations/transitions automatically for view-transition pseudo-elements,
+   not for ordinary transitions like .list-*, so it's listed explicitly). */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+
+  .list-move,
+  .list-enter-active,
+  .list-leave-active {
+    transition: none !important;
   }
 }
 
