@@ -6,8 +6,10 @@ firebase-debug*.log*
 .firebase/
 firebase/.firebase/
 firebase/app/
+firebase/functions/lib/
 
 node_modules/
+*.tsbuildinfo
 
 .env
 .env.*

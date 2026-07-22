@@ -17,7 +17,7 @@ const router = createRouter({
 // Every navigation becomes a view transition when the browser
 // supports it. Pages opt into specific effects purely via CSS in
 // assets/css/transitions.css — this file never changes per-page.
-router.beforeResolve(async (to, from) => {
+router.beforeResolve(async (_to, from) => {
   if (from === START_LOCATION) return // initial load: no transition
   if (!document.startViewTransition) return // unsupported: navigate plainly
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return

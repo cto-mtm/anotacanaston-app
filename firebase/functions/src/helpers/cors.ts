@@ -1,4 +1,5 @@
-import type { Request, Response } from 'firebase-functions'
+import type { Request } from 'firebase-functions/v2/https'
+import type { Response } from 'express'
 
 // REPLACE_ME — add your real production origins here.
 // The last two entries are what the iOS/Android Capacitor shells send as
