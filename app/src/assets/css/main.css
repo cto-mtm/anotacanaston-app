@@ -1,5 +1,14 @@
 @import "tailwindcss";
 @import "./transitions.css";
+@import "@fontsource/fondamento";
+
+@theme {
+  --font-sans: 'Fondamento', cursive;
+}
+
+body {
+  font-family: 'Fondamento', cursive;
+}
 
 /* Safe-area utilities so the same markup is correct in the browser and
    inside the native iOS/Android shells. */
