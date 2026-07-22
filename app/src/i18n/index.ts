@@ -1,8 +1,13 @@
 import { createI18n } from 'vue-i18n'
 import common from './locales/configs/common'
+import game from './locales/configs/game'
 import shell from './locales/components/shell'
 import home from './locales/pages/home'
-import itemDetail from './locales/pages/itemDetail'
+import newSession from './locales/pages/newSession'
+import gameScreen from './locales/pages/gameScreen'
+import roundEntry from './locales/pages/roundEntry'
+import summary from './locales/pages/summary'
+import rules from './locales/pages/rules'
 import about from './locales/pages/about'
 import notFound from './locales/pages/notFound'
 
@@ -12,17 +17,27 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 const messages = {
   es: {
     common: common.es,
+    game: game.es,
     shell: shell.es,
     home: home.es,
-    itemDetail: itemDetail.es,
+    newSession: newSession.es,
+    gameScreen: gameScreen.es,
+    roundEntry: roundEntry.es,
+    summary: summary.es,
+    rules: rules.es,
     about: about.es,
     notFound: notFound.es,
   },
   en: {
     common: common.en,
+    game: game.en,
     shell: shell.en,
     home: home.en,
-    itemDetail: itemDetail.en,
+    newSession: newSession.en,
+    gameScreen: gameScreen.en,
+    roundEntry: roundEntry.en,
+    summary: summary.en,
+    rules: rules.en,
     about: about.en,
     notFound: notFound.en,
   },

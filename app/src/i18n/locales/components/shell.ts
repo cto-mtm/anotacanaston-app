@@ -1,10 +1,12 @@
 const es = {
-  navHome: 'Inicio',
+  navSessions: 'Partidas',
+  navRules: 'Reglas',
   navAbout: 'Acerca de',
 }
 
 const en: typeof es = {
-  navHome: 'Home',
+  navSessions: 'Sessions',
+  navRules: 'Rules',
   navAbout: 'About',
 }
 
