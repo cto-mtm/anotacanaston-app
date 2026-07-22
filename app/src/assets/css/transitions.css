@@ -16,7 +16,7 @@
 
 /* Recipe 2 — hero elements: the morph is automatic; we only tune timing.
    Matches any element carrying a view-transition-name via the universal
-   group selector (e.g. item-<id>, item-title-<id>). */
+   group selector (e.g. session-<id>, session-title-<id>). */
 ::view-transition-group(*) {
   animation-duration: 300ms;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

@@ -1,7 +1,6 @@
 const es = {
   title: 'Anotar mano',
   editTitle: 'Editar mano',
-  teamPanel: 'Equipo {team}',
   exactCutLabel: 'Corte exacto (+500)',
   misdealLabel: 'Mal dada (−500)',
   honorsLabel: 'Honores (treses rojos)',
@@ -29,7 +28,6 @@ const es = {
 const en: typeof es = {
   title: 'Record round',
   editTitle: 'Edit round',
-  teamPanel: 'Team {team}',
   exactCutLabel: 'Exact cut (+500)',
   misdealLabel: 'Misdeal (−500)',
   honorsLabel: 'Honors (red threes)',

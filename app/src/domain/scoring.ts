@@ -59,13 +59,27 @@ function totalCanastas(entry: TeamRoundEntry): number {
   return ALL_CANASTA_TYPES.reduce((sum, t) => sum + entry.canastas[t], 0)
 }
 
-function honorsValue(count: number, entry: TeamRoundEntry): number {
-  if (count <= 0) return 0
+export type HonorsClosedKind = 'both' | 'cleanOnly' | 'other'
+
+/** Which honors bracket a team is in, driven by its closed canastas — used
+ * both to score a round and to render the honors matrix on the Rules page. */
+export function honorsClosedKind(entry: TeamRoundEntry): HonorsClosedKind {
   const clean = hasClean(entry)
   const dirty = hasDirty(entry)
-  if (clean && dirty) return count <= 3 ? count * 100 : count * 200
-  if (clean && !dirty) return 0
+  if (clean && dirty) return 'both'
+  if (clean && !dirty) return 'cleanOnly'
+  return 'other'
+}
+
+export function honorsValueForKind(count: number, kind: HonorsClosedKind): number {
+  if (count <= 0) return 0
+  if (kind === 'cleanOnly') return 0
+  if (kind === 'both') return count <= 3 ? count * 100 : count * 200
   return count <= 3 ? count * -200 : count * -400
+}
+
+function honorsValue(count: number, entry: TeamRoundEntry): number {
+  return honorsValueForKind(count, honorsClosedKind(entry))
 }
 
 function countBonus(total: number): number {

@@ -10,6 +10,8 @@ const es = {
   handPoints: 'Puntos en mano',
   pilonTriado: 'Pilón triado',
   wentOut: 'Cerró la mano',
+  canastas: 'Canastas',
+  countBonus: 'Bono por cantidad',
   canastaType: {
     clean: 'Limpia',
     dirty: 'Sucia',
@@ -42,6 +44,8 @@ const en: typeof es = {
   handPoints: 'Hand points',
   pilonTriado: 'Frozen pile (pilón triado)',
   wentOut: 'Closed the round',
+  canastas: 'Canastas',
+  countBonus: 'Count bonus',
   canastaType: {
     clean: 'Clean',
     dirty: 'Dirty',

@@ -17,6 +17,7 @@ export interface PersistOptions<T = unknown> {
 // is therefore not compile-time checked against the store's state; runtime
 // validation on hydrate/write is what actually protects against drift.
 declare module 'pinia' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- S/Store must match Pinia's declaration to merge into it
   export interface DefineStoreOptionsBase<S, Store> {
     persist?: PersistOptions
   }

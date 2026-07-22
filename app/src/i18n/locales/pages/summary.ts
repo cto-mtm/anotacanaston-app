@@ -4,6 +4,7 @@ const es = {
   winner: 'Ganador',
   winners: 'Ganadores (empate)',
   perGameMatrix: 'Resultado por partida',
+  gameColumn: 'Partida',
   backToSession: 'Volver a la sesión',
 }
 
@@ -13,6 +14,7 @@ const en: typeof es = {
   winner: 'Winner',
   winners: 'Winners (tied)',
   perGameMatrix: 'Result by game',
+  gameColumn: 'Game',
   backToSession: 'Back to session',
 }
 

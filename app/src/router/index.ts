@@ -4,7 +4,21 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('../pages/HomePage.vue') },
-    { path: '/items/:id', name: 'item-detail', component: () => import('../pages/ItemDetailPage.vue') },
+    { path: '/sessions/new', name: 'session-new', component: () => import('../pages/NewSessionWizard.vue') },
+    { path: '/sessions/:id', name: 'session-detail', component: () => import('../pages/SessionDetailPage.vue') },
+    { path: '/sessions/:id/summary', name: 'session-summary', component: () => import('../pages/SessionSummaryPage.vue') },
+    { path: '/sessions/:id/games/:g', name: 'game', component: () => import('../pages/GamePage.vue') },
+    {
+      path: '/sessions/:id/games/:g/rounds/new',
+      name: 'round-new',
+      component: () => import('../pages/RoundEntryPage.vue'),
+    },
+    {
+      path: '/sessions/:id/games/:g/rounds/:r',
+      name: 'round-edit',
+      component: () => import('../pages/RoundEntryPage.vue'),
+    },
+    { path: '/rules', name: 'rules', component: () => import('../pages/RulesPage.vue') },
     { path: '/about', name: 'about', component: () => import('../pages/AboutPage.vue') },
     // Catch-all 404. Required because Firebase Hosting rewrites every URL
     // to index.html — without this, typos render an empty RouterView.

@@ -3,6 +3,7 @@ import common from './locales/configs/common'
 import game from './locales/configs/game'
 import shell from './locales/components/shell'
 import home from './locales/pages/home'
+import sessionDetail from './locales/pages/sessionDetail'
 import newSession from './locales/pages/newSession'
 import gameScreen from './locales/pages/gameScreen'
 import roundEntry from './locales/pages/roundEntry'
@@ -20,6 +21,7 @@ const messages = {
     game: game.es,
     shell: shell.es,
     home: home.es,
+    sessionDetail: sessionDetail.es,
     newSession: newSession.es,
     gameScreen: gameScreen.es,
     roundEntry: roundEntry.es,
@@ -33,6 +35,7 @@ const messages = {
     game: game.en,
     shell: shell.en,
     home: home.en,
+    sessionDetail: sessionDetail.en,
     newSession: newSession.en,
     gameScreen: gameScreen.en,
     roundEntry: roundEntry.en,
@@ -48,6 +51,7 @@ type MessageSchema = (typeof messages)['es']
 // Augments vue-i18n's types so `t('home.title')` autocompletes and
 // cross-locale key mismatches are caught by tsc.
 declare module 'vue-i18n' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module augmentation via interface merging requires this shape
   export interface DefineLocaleMessage extends MessageSchema {}
 }
 
