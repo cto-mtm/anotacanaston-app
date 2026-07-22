@@ -1,0 +1,51 @@
+/* ════════════════════════════════════════════════════════════
+   VIEW TRANSITION RECIPES
+   Rules of the house:
+   - Animate ONLY transform and opacity (compositor-friendly).
+   - Durations 200–350ms. Easing: cubic-bezier(0.4, 0, 0.2, 1).
+   - Every recipe must look acceptable if it simply cross-fades
+     (that's the automatic fallback).
+   ════════════════════════════════════════════════════════════ */
+
+/* Recipe 1 — default page cross-fade (applies to everything) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Recipe 2 — hero elements: the morph is automatic; we only tune timing.
+   Matches any element carrying a view-transition-name via the universal
+   group selector (e.g. item-<id>, item-title-<id>). */
+::view-transition-group(*) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Recipe 3 — reduced motion: kill everything. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Recipe 4 — within-page list reorder/insert/remove (<TransitionGroup name="list">) */
+.list-move {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+.list-leave-active {
+  position: absolute;
+}

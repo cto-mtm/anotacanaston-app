@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "./transitions.css";
+
+/* Safe-area utilities so the same markup is correct in the browser and
+   inside the native iOS/Android shells. */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
