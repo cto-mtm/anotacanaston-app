@@ -153,7 +153,7 @@ function create() {
         <div class="mt-1 flex gap-2">
           <button
             type="button"
-            class="rounded-lg border px-4 py-2 text-sm"
+            class="min-h-11 rounded-lg border px-5 py-2.5 text-sm"
             :class="playerCount === 4 ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300'"
             @click="playerCount = 4"
           >
@@ -161,7 +161,7 @@ function create() {
           </button>
           <button
             type="button"
-            class="rounded-lg border px-4 py-2 text-sm"
+            class="min-h-11 rounded-lg border px-5 py-2.5 text-sm"
             :class="playerCount === 6 ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300'"
             @click="playerCount = 6"
           >
@@ -174,7 +174,7 @@ function create() {
         <input
           v-model="date"
           type="date"
-          class="mt-1 block rounded border border-neutral-300 px-2 py-1"
+          class="mt-1 block w-full rounded border border-neutral-300 px-3 py-2.5 text-base"
         >
       </label>
     </section>
@@ -197,7 +197,7 @@ function create() {
           <input
             v-model="player.name"
             type="text"
-            class="mt-1 block w-full rounded border border-neutral-300 px-2 py-1"
+            class="mt-1 block w-full rounded border border-neutral-300 px-3 py-2.5 text-base"
           >
         </label>
       </div>

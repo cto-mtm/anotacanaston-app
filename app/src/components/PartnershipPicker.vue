@@ -37,7 +37,7 @@ function cycle(id: PlayerId) {
         v-for="player in players"
         :key="player.id"
         type="button"
-        class="rounded-full border px-3 py-1.5 text-sm transition-colors"
+        class="min-h-11 rounded-full border px-4 py-2.5 text-sm transition-colors"
         :class="{
           'border-indigo-600 bg-indigo-600 text-white': teamOf(player.id) === 'A',
           'border-rose-600 bg-rose-600 text-white': teamOf(player.id) === 'B',

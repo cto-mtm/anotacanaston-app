@@ -23,6 +23,11 @@ const roundIndex = computed(() => Number(route.params.r))
 const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
 
+// Both team panels always render (needed for the score preview/validation
+// below), but on narrow screens only one is shown at a time via these tabs;
+// md: and up shows both side by side regardless of this.
+const activeTeam = ref<'A' | 'B'>('A')
+
 function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
   const canastas = Object.fromEntries(ALL_CANASTA_TYPES.map((c) => [c, 0])) as Record<CanastaType, number>
   const handPoints = Object.fromEntries(playerIds.map((id) => [id, 0]))
@@ -92,8 +97,28 @@ function save() {
       {{ t(isEdit ? 'roundEntry.editTitle' : 'roundEntry.title') }}
     </h1>
 
+    <!-- Team tabs: mobile only, both panels always show on md: and up -->
+    <div class="mb-4 flex gap-2 md:hidden">
+      <button
+        type="button"
+        class="flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium"
+        :class="activeTeam === 'A' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300 bg-white text-neutral-700'"
+        @click="activeTeam = 'A'"
+      >
+        {{ t('game.team.A') }}
+      </button>
+      <button
+        type="button"
+        class="flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium"
+        :class="activeTeam === 'B' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300 bg-white text-neutral-700'"
+        @click="activeTeam = 'B'"
+      >
+        {{ t('game.team.B') }}
+      </button>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div>
+      <div :class="{ hidden: activeTeam !== 'A', 'md:block': true }">
         <TeamRoundForm
           v-model="entriesA"
           :players="playersFor('A')"
@@ -111,7 +136,7 @@ function save() {
           :team-label="t('game.team.A')"
         />
       </div>
-      <div>
+      <div :class="{ hidden: activeTeam !== 'B', 'md:block': true }">
         <TeamRoundForm
           v-model="entriesB"
           :players="playersFor('B')"

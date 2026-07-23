@@ -36,17 +36,19 @@ function numberFrom(event: Event): number {
       {{ teamLabel }}
     </h3>
 
-    <label class="flex items-center gap-2 py-1 text-sm">
+    <label class="flex min-h-11 items-center gap-2 py-2 text-sm">
       <input
         type="checkbox"
+        class="h-5 w-5"
         :checked="modelValue.exactCut"
         @change="patch({ exactCut: checked($event) })"
       >
       {{ t('roundEntry.exactCutLabel') }}
     </label>
-    <label class="flex items-center gap-2 py-1 text-sm">
+    <label class="flex min-h-11 items-center gap-2 py-2 text-sm">
       <input
         type="checkbox"
+        class="h-5 w-5"
         :checked="modelValue.misdeal"
         @change="patch({ misdeal: checked($event) })"
       >
@@ -59,23 +61,25 @@ function numberFrom(event: Event): number {
         type="number"
         inputmode="numeric"
         min="0"
-        class="w-16 rounded border border-neutral-300 text-center"
+        class="w-16 rounded border border-neutral-300 py-2 text-center text-base"
         :value="modelValue.honors"
         @input="patch({ honors: numberFrom($event) })"
       >
     </div>
 
-    <label class="flex items-center gap-2 py-1 text-sm">
+    <label class="flex min-h-11 items-center gap-2 py-2 text-sm">
       <input
         type="checkbox"
+        class="h-5 w-5"
         :checked="modelValue.wentOut"
         @change="patch({ wentOut: checked($event) })"
       >
       {{ t('roundEntry.wentOutLabel') }}
     </label>
-    <label class="flex items-center gap-2 py-1 text-sm">
+    <label class="flex min-h-11 items-center gap-2 py-2 text-sm">
       <input
         type="checkbox"
+        class="h-5 w-5"
         :checked="modelValue.blackThreesBonus"
         @change="patch({ blackThreesBonus: checked($event) })"
       >
@@ -93,13 +97,13 @@ function numberFrom(event: Event): number {
     </div>
 
     <div class="mt-3 border-t border-neutral-100 pt-2">
-      <div class="flex items-center justify-between py-1">
+      <div class="flex items-center justify-between py-2">
         <label class="text-sm">{{ t('roundEntry.meldedPointsLabel') }}</label>
         <input
           type="number"
           inputmode="numeric"
           min="0"
-          class="w-20 rounded border border-neutral-300 text-center"
+          class="w-20 rounded border border-neutral-300 py-2 text-center text-base"
           :value="modelValue.meldedPoints"
           @input="patch({ meldedPoints: numberFrom($event) })"
         >
@@ -113,14 +117,14 @@ function numberFrom(event: Event): number {
       <div
         v-for="player in players"
         :key="player.id"
-        class="flex items-center justify-between py-1"
+        class="flex items-center justify-between py-2"
       >
         <label class="text-sm">{{ t('roundEntry.handPointsLabel', { player: player.name }) }}</label>
         <input
           type="number"
           inputmode="numeric"
           min="0"
-          class="w-20 rounded border border-neutral-300 text-center"
+          class="w-20 rounded border border-neutral-300 py-2 text-center text-base"
           :value="modelValue.handPoints[player.id] ?? 0"
           @input="setHandPoints(player.id, numberFrom($event))"
         >

@@ -37,7 +37,18 @@ Wrap the list in `<TransitionGroup name="list">` and rely on the `.list-*`
 classes under "Recipe 4" in `transitions.css` — `.list-move` handles the FLIP
 reorder animation, `.list-enter-*` / `.list-leave-*` handle insert/remove.
 
-## 4. The rules
+## 4. Animate a toggleable panel (e.g. the mobile menu)
+
+`AppShell.vue`'s full-screen mobile menu is the reference: a `ref<boolean>`
+gates a `v-if` block wrapped in `<Transition name="mobile-menu">`, and the
+`.mobile-menu-*` classes under "Recipe 5" in `transitions.css` slide it in
+from the right while fading. The same pattern works for any show/hide
+panel — pick a unique transition `name`, define `<name>-enter-from` /
+`<name>-leave-to` (the hidden state) and `<name>-enter-active` /
+`<name>-leave-active` (the `transition` property), and let the browser
+interpolate to the element's normal resting styles.
+
+## 5. The rules
 
 - Animate only `transform` and `opacity` (compositor-friendly).
 - Durations 200–350ms. Easing: `cubic-bezier(0.4, 0, 0.2, 1)`.
@@ -46,7 +57,7 @@ reorder animation, `.list-enter-*` / `.list-leave-*` handle insert/remove.
   cross-fade or instant navigation, never a broken/stuck state.
 - Never nest `startViewTransition` calls.
 
-## 5. Platform support
+## 6. Platform support
 
 Chromium (including Android WebView) since version 111; iOS WKWebView since
 iOS 18. On anything older, the router wrapper silently degrades to instant

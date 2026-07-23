@@ -15,12 +15,12 @@ function onInput(event: Event) {
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-2 py-1">
+  <div class="flex items-center justify-between gap-2 py-2">
     <span class="text-sm text-neutral-700">{{ label }}</span>
     <div class="flex items-center gap-2">
       <button
         type="button"
-        class="h-7 w-7 rounded border border-neutral-300 text-neutral-600 hover:bg-neutral-100"
+        class="flex h-11 w-11 items-center justify-center rounded border border-neutral-300 text-lg text-neutral-600 hover:bg-neutral-100"
         @click="dec"
       >
         −
@@ -30,12 +30,12 @@ function onInput(event: Event) {
         type="number"
         inputmode="numeric"
         min="0"
-        class="w-12 rounded border border-neutral-300 text-center text-sm tabular-nums"
+        class="w-14 rounded border border-neutral-300 py-2 text-center text-base tabular-nums"
         @input="onInput"
       >
       <button
         type="button"
-        class="h-7 w-7 rounded border border-neutral-300 text-neutral-600 hover:bg-neutral-100"
+        class="flex h-11 w-11 items-center justify-center rounded border border-neutral-300 text-lg text-neutral-600 hover:bg-neutral-100"
         @click="inc"
       >
         +

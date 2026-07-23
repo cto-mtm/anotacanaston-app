@@ -20,7 +20,7 @@ function isExcluded(id: PlayerId): boolean {
       :key="player.id"
       type="button"
       :disabled="isExcluded(player.id)"
-      class="rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+      class="min-h-11 rounded-full border px-4 py-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
       :class="
         modelValue === player.id
           ? 'border-indigo-600 bg-indigo-600 text-white'

@@ -35,7 +35,9 @@
 
   .list-move,
   .list-enter-active,
-  .list-leave-active {
+  .list-leave-active,
+  .mobile-menu-enter-active,
+  .mobile-menu-leave-active {
     transition: none !important;
   }
 }
@@ -57,4 +59,18 @@
 }
 .list-leave-active {
   position: absolute;
+}
+
+/* Recipe 5 — mobile full-screen menu (<Transition name="mobile-menu">):
+   slides in from the right and fades. */
+.mobile-menu-enter-active,
+.mobile-menu-leave-active {
+  transition:
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.mobile-menu-enter-from,
+.mobile-menu-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
