@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '../stores/account'
 import BaseButton from '../components/BaseButton.vue'
 import logo from '../assets/images/logo-color.svg'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const account = useAccountStore()
 
 function continueOffline() {
   account.continueOffline()
-  router.replace('/')
+  const redirect = route.query.redirect
+  // In-app paths only — anything else (or absent) falls back to home.
+  const target =
+    typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+      ? redirect
+      : '/'
+  router.replace(target)
 }
 </script>
 

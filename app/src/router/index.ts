@@ -38,7 +38,12 @@ const PRE_CHOICE_ROUTES = new Set(['welcome', 'rules', 'about', 'not-found'])
 router.beforeEach((to) => {
   const account = useAccountStore()
   if (account.needsWelcome && !PRE_CHOICE_ROUTES.has(String(to.name))) {
-    return { name: 'welcome', replace: true }
+    return {
+      name: 'welcome',
+      replace: true,
+      // Preserve deep links so the original destination survives the gate.
+      query: to.fullPath === '/' ? {} : { redirect: to.fullPath },
+    }
   }
 })
 
