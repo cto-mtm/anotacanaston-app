@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import LocaleSwitcher from './LocaleSwitcher.vue'
+import logo from '../assets/images/logo-color.svg'
 
 const { t } = useI18n()
 </script>
@@ -8,27 +9,40 @@ const { t } = useI18n()
 <template>
   <div class="flex min-h-screen flex-col bg-neutral-50 text-neutral-900">
     <header class="safe-top sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
-      <nav class="flex gap-4 text-sm font-medium">
-        <RouterLink
-          to="/"
-          class="hover:text-indigo-600"
+      <RouterLink
+        to="/"
+        class="flex items-center gap-2"
+      >
+        <img
+          :src="logo"
+          alt="Anota Canaston"
+          class="h-8 w-8"
         >
-          {{ t('shell.navSessions') }}
-        </RouterLink>
-        <RouterLink
-          to="/rules"
-          class="hover:text-indigo-600"
-        >
-          {{ t('shell.navRules') }}
-        </RouterLink>
-        <RouterLink
-          to="/about"
-          class="hover:text-indigo-600"
-        >
-          {{ t('shell.navAbout') }}
-        </RouterLink>
-      </nav>
-      <LocaleSwitcher />
+        <span class="hidden text-lg font-semibold sm:inline">Anota Canaston</span>
+      </RouterLink>
+      <div class="flex items-center gap-4">
+        <nav class="flex gap-4 text-sm font-medium">
+          <RouterLink
+            to="/"
+            class="hover:text-indigo-600"
+          >
+            {{ t('shell.navSessions') }}
+          </RouterLink>
+          <RouterLink
+            to="/rules"
+            class="hover:text-indigo-600"
+          >
+            {{ t('shell.navRules') }}
+          </RouterLink>
+          <RouterLink
+            to="/about"
+            class="hover:text-indigo-600"
+          >
+            {{ t('shell.navAbout') }}
+          </RouterLink>
+        </nav>
+        <LocaleSwitcher />
+      </div>
     </header>
 
     <main class="flex-1 px-4 py-6">
