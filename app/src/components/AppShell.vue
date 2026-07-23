@@ -2,11 +2,13 @@
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useAccountStore } from '../stores/account'
 import LocaleSwitcher from './LocaleSwitcher.vue'
 import logo from '../assets/images/logo-color.svg'
 
 const { t } = useI18n()
 const route = useRoute()
+const account = useAccountStore()
 const menuOpen = ref(false)
 
 // Closing on route change covers both tapping a nav link and any
@@ -26,7 +28,7 @@ watch(menuOpen, (open) => {
 
 <template>
   <div class="flex min-h-screen flex-col bg-neutral-50 text-neutral-900">
-    <header class="safe-top sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur">
+    <header class="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 pt-4 pb-3 backdrop-blur">
       <RouterLink
         to="/"
         class="flex items-center gap-2"
@@ -61,6 +63,14 @@ watch(menuOpen, (open) => {
             {{ t('shell.navAbout') }}
           </RouterLink>
         </nav>
+        <RouterLink
+          v-if="account.mode === 'offline'"
+          to="/welcome"
+          class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200"
+          :title="t('shell.navAccount')"
+        >
+          {{ t('shell.offlineBadge') }}
+        </RouterLink>
         <LocaleSwitcher />
       </div>
 
@@ -147,6 +157,18 @@ watch(menuOpen, (open) => {
             class="rounded-lg px-4 py-3 hover:bg-neutral-100"
           >
             {{ t('shell.navAbout') }}
+          </RouterLink>
+          <RouterLink
+            to="/welcome"
+            class="flex items-center justify-between rounded-lg px-4 py-3 hover:bg-neutral-100"
+          >
+            {{ t('shell.navAccount') }}
+            <span
+              v-if="account.mode === 'offline'"
+              class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800"
+            >
+              {{ t('shell.offlineBadge') }}
+            </span>
           </RouterLink>
         </nav>
 

@@ -11,6 +11,7 @@ import summary from './locales/pages/summary'
 import rules from './locales/pages/rules'
 import about from './locales/pages/about'
 import notFound from './locales/pages/notFound'
+import welcome from './locales/pages/welcome'
 
 export const SUPPORTED_LOCALES = ['es', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
@@ -29,6 +30,7 @@ const messages = {
     rules: rules.es,
     about: about.es,
     notFound: notFound.es,
+    welcome: welcome.es,
   },
   en: {
     common: common.en,
@@ -43,6 +45,7 @@ const messages = {
     rules: rules.en,
     about: about.en,
     notFound: notFound.en,
+    welcome: welcome.en,
   },
 }
 

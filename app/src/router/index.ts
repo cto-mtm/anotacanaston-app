@@ -1,9 +1,11 @@
 import { createRouter, createWebHistory, START_LOCATION } from 'vue-router'
+import { useAccountStore } from '../stores/account'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('../pages/HomePage.vue') },
+    { path: '/welcome', name: 'welcome', component: () => import('../pages/WelcomePage.vue') },
     { path: '/sessions/new', name: 'session-new', component: () => import('../pages/NewSessionWizard.vue') },
     { path: '/sessions/:id', name: 'session-detail', component: () => import('../pages/SessionDetailPage.vue') },
     { path: '/sessions/:id/summary', name: 'session-summary', component: () => import('../pages/SessionSummaryPage.vue') },
@@ -25,6 +27,19 @@ const router = createRouter({
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../pages/NotFoundPage.vue') },
   ],
   scrollBehavior: () => ({ top: 0 }),
+})
+
+// ── WELCOME GATE ────────────────────────────────────────────────
+// Until the user picks offline vs sign-in on first launch, data-bearing
+// pages redirect to the welcome screen. Reference pages stay reachable
+// so the shell nav works before the choice is made.
+const PRE_CHOICE_ROUTES = new Set(['welcome', 'rules', 'about', 'not-found'])
+
+router.beforeEach((to) => {
+  const account = useAccountStore()
+  if (account.needsWelcome && !PRE_CHOICE_ROUTES.has(String(to.name))) {
+    return { name: 'welcome', replace: true }
+  }
 })
 
 // ── VIEW TRANSITION WRAPPER ─────────────────────────────────────
