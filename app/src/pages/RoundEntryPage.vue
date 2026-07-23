@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
-import { scoreRound, validateRound } from '../domain/scoring'
+import { scoreRound, validateRound, checkCardSupply } from '../domain/scoring'
 import { ALL_CANASTA_TYPES } from '../domain/constants'
 import TeamRoundForm from '../components/TeamRoundForm.vue'
 import ScorePreview from '../components/ScorePreview.vue'
@@ -64,6 +64,12 @@ const breakdownB = computed(() => scoreRound(entriesB.value))
 
 const validation = computed(() =>
   validateRound({ entries: { A: entriesA.value, B: entriesB.value } }, session.value?.playerCount ?? 4),
+)
+
+// Non-blocking: unlike `validation`, these never stop the save — they're a
+// heads-up that a canasta combination looks off given the deck in play.
+const cardSupplyWarnings = computed(() =>
+  checkCardSupply({ entries: { A: entriesA.value, B: entriesB.value } }, session.value?.playerCount ?? 4),
 )
 
 function playersFor(team: 'A' | 'B') {
@@ -177,6 +183,26 @@ function save() {
       <BaseButton @click="persist">
         {{ t('roundEntry.saveAnyway') }}
       </BaseButton>
+    </div>
+
+    <div
+      v-if="cardSupplyWarnings.length > 0"
+      class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+    >
+      <p class="mb-2 font-medium">
+        {{ t('roundEntry.cardSupplyTitle') }}
+      </p>
+      <ul class="list-inside list-disc">
+        <li
+          v-for="(warning, i) in cardSupplyWarnings"
+          :key="i"
+        >
+          {{ t(`roundEntry.cardSupplyWarnings.${warning.code}`) }}
+          <template v-if="warning.team">
+            — {{ t(`game.team.${warning.team}`) }}
+          </template>
+        </li>
+      </ul>
     </div>
 
     <div class="mt-6">

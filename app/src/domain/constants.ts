@@ -40,8 +40,47 @@ export const CANASTON_BONUS = 3_000
 export const SUPER_CANASTON_THRESHOLD = 12
 export const SUPER_CANASTON_BONUS = 5_000
 
+/** Standard decks used per session, by player count (per house rules). */
+export const DECKS_PER_SESSION: Record<PlayerCount, number> = { 4: 3, 6: 4 }
+
+const SUITS = 4
+const RED_SUITS = 2 // hearts, diamonds
+const JOKERS_PER_DECK = 2
+
 /** Only this many red threes exist in the deck, per player count. */
-export const MAX_HONORS: Record<PlayerCount, number> = { 4: 6, 6: 8 }
+export const MAX_HONORS: Record<PlayerCount, number> = {
+  4: RED_SUITS * DECKS_PER_SESSION[4],
+  6: RED_SUITS * DECKS_PER_SESSION[6],
+}
+
+/** Total aces across every deck in play (4 suits x decks). */
+export function totalAces(playerCount: PlayerCount): number {
+  return SUITS * DECKS_PER_SESSION[playerCount]
+}
+
+/** Total deuces (patos) across every deck in play (4 suits x decks). */
+export function totalDeuces(playerCount: PlayerCount): number {
+  return SUITS * DECKS_PER_SESSION[playerCount]
+}
+
+/** Total jokers across every deck in play (2 per deck). */
+export function totalJokers(playerCount: PlayerCount): number {
+  return JOKERS_PER_DECK * DECKS_PER_SESSION[playerCount]
+}
+
+/**
+ * Minimum real (non-wildcard) cards of a rank a single canasta of that rank
+ * consumes — a canasta is 7+ cards, and "clean" means zero wildcards while
+ * "dirty" allows up to 2. Used to sanity-check whether a combination of
+ * rank-locked canastas (aces, deuces) is even possible given the cards
+ * actually in the deck.
+ */
+export const MIN_NATURAL_CARDS_PER_CLEAN_CANASTA = 7
+export const MIN_NATURAL_CARDS_PER_DIRTY_CANASTA = 5
+
+/** A joker canasta is a fixed recipe, not "7 of a rank with wildcards". */
+export const JOKER_CANASTA_JOKER_COUNT = 6
+export const JOKER_CANASTA_DEUCE_COUNT = 1
 
 /**
  * Meld thresholds use <= boundaries against the team's cumulative score

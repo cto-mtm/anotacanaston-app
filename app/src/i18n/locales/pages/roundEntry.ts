@@ -23,6 +23,13 @@ const es = {
   },
   overrideWarning: 'Hay advertencias en esta mano. ¿Guardar igual?',
   saveAnyway: 'Guardar igual',
+  cardSupplyTitle: 'Revisá las canastas: esto no parece posible con el mazo',
+  cardSupplyWarnings: {
+    aceSupplyExceeded: 'Hacen falta más ases de los que hay en el mazo para esa cantidad de canastones de ases.',
+    bothAceVariantsSameTeam: 'Ese equipo tiene un canastón de ases limpio y uno sucio a la vez: es muy poco probable con los ases disponibles.',
+    deuceSupplyExceeded: 'Hacen falta más patos de los que hay en el mazo (los canastones de comodines también usan un pato cada uno).',
+    jokerSupplyExceeded: 'Hacen falta más comodines de los que hay en el mazo para esa cantidad de canastones de comodines.',
+  },
 }
 
 const en: typeof es = {
@@ -50,6 +57,13 @@ const en: typeof es = {
   },
   overrideWarning: 'This round has warnings. Save anyway?',
   saveAnyway: 'Save anyway',
+  cardSupplyTitle: "Double check these canastas — this doesn't look possible with the deck",
+  cardSupplyWarnings: {
+    aceSupplyExceeded: 'That many ace canastas would need more aces than exist in the deck.',
+    bothAceVariantsSameTeam: 'That team has both a clean and a dirty ace canasta — very unlikely given how few aces are in play.',
+    deuceSupplyExceeded: 'That would need more deuces than exist in the deck (joker canastas each use one deuce too).',
+    jokerSupplyExceeded: 'That many joker canastas would need more jokers than exist in the deck.',
+  },
 }
 
 export default { es, en }

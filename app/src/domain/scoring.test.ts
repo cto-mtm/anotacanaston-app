@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { scoreRound, validateRound, gameTotals, gameResult, meldThreshold, sessionTallies, sessionWinner } from './scoring'
+import {
+  scoreRound,
+  validateRound,
+  checkCardSupply,
+  gameTotals,
+  gameResult,
+  meldThreshold,
+  sessionTallies,
+  sessionWinner,
+} from './scoring'
 import { CANASTA_VALUES } from './constants'
 import { makeEntry } from './test-helpers'
 import type { CanastaType, Game, Round, Session } from './types'
@@ -253,6 +262,106 @@ describe('validateRound — cross-team checks', () => {
       },
     }
     expect(validateRound(round, playerCount).valid).toBe(true)
+  })
+})
+
+describe('checkCardSupply', () => {
+  it('is silent for an ordinary round with no rank-locked canastas', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+        B: makeEntry(),
+      },
+    }
+    expect(checkCardSupply(round, 4)).toEqual([])
+  })
+
+  it('is silent for a single clean ace canasta (7 of 12 aces, 4p)', () => {
+    const round: Round = {
+      entries: { A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }), B: makeEntry() },
+    }
+    expect(checkCardSupply(round, 4)).toEqual([])
+  })
+
+  it('flags two clean ace canastas across teams in a 4p game (14 > 12 aces)', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+      },
+    }
+    expect(checkCardSupply(round, 4)).toContainEqual({ code: 'aceSupplyExceeded' })
+  })
+
+  it('does not flag the same two clean ace canastas in a 6p game (14 <= 16 aces)', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+      },
+    }
+    expect(checkCardSupply(round, 6)).toEqual([])
+  })
+
+  it('flags three clean ace canastas in a 6p game (21 > 16 aces)', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanAce: 2 } as Record<CanastaType, number> }),
+        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+      },
+    }
+    expect(checkCardSupply(round, 6)).toContainEqual({ code: 'aceSupplyExceeded' })
+  })
+
+  it('flags a team with both a clean and a dirty ace canasta, independent of supply', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanAce: 1, dirtyAce: 1 } as Record<CanastaType, number> }),
+        B: makeEntry(),
+      },
+    }
+    const warnings = checkCardSupply(round, 4)
+    expect(warnings).toContainEqual({ team: 'A', code: 'bothAceVariantsSameTeam' })
+    // Exactly 12 aces needed (7 clean + 5 dirty) against 12 available: not a supply violation on its own.
+    expect(warnings).not.toContainEqual({ code: 'aceSupplyExceeded' })
+  })
+
+  it('flags two clean deuce canastas across teams in a 4p game (14 > 12 deuces)', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
+        B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
+      },
+    }
+    expect(checkCardSupply(round, 4)).toContainEqual({ code: 'deuceSupplyExceeded' })
+  })
+
+  it('counts each joker canasta as also consuming one deuce', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { cleanDeuce: 1, joker: 1 } as Record<CanastaType, number> }), // 7 + 1 = 8 deuces
+        B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }), // 7 deuces
+      },
+    }
+    // 15 deuces needed > 12 available in a 4p game.
+    expect(checkCardSupply(round, 4)).toContainEqual({ code: 'deuceSupplyExceeded' })
+  })
+
+  it('is silent for a single joker canasta (6 of 6 jokers, 4p — exactly enough)', () => {
+    const round: Round = {
+      entries: { A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }), B: makeEntry() },
+    }
+    expect(checkCardSupply(round, 4)).toEqual([])
+  })
+
+  it('flags two joker canastas even in a 6p game (12 > 8 jokers)', () => {
+    const round: Round = {
+      entries: {
+        A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
+        B: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
+      },
+    }
+    expect(checkCardSupply(round, 6)).toContainEqual({ code: 'jokerSupplyExceeded' })
   })
 })
 

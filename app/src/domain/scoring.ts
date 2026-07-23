@@ -9,12 +9,19 @@ import {
   EXACT_CUT_BONUS,
   GAME_TARGET,
   GOING_OUT_POINTS,
+  JOKER_CANASTA_DEUCE_COUNT,
+  JOKER_CANASTA_JOKER_COUNT,
   MAX_HONORS,
   MELD_THRESHOLDS,
   MELD_THRESHOLD_DEFAULT,
+  MIN_NATURAL_CARDS_PER_CLEAN_CANASTA,
+  MIN_NATURAL_CARDS_PER_DIRTY_CANASTA,
   MISDEAL_PENALTY,
   SUPER_CANASTON_BONUS,
   SUPER_CANASTON_THRESHOLD,
+  totalAces,
+  totalDeuces,
+  totalJokers,
 } from './constants'
 import type { Game, PlayerCount, PlayerId, Round, Session, TeamId, TeamRoundEntry } from './types'
 
@@ -165,6 +172,56 @@ export function validateRound(round: Round, playerCount: PlayerCount): RoundVali
   if (misdealCount > 1) violations.push({ code: 'multipleMisdeal' })
 
   return { valid: violations.length === 0, violations }
+}
+
+export type CardSupplyWarningCode =
+  | 'aceSupplyExceeded'
+  | 'bothAceVariantsSameTeam'
+  | 'deuceSupplyExceeded'
+  | 'jokerSupplyExceeded'
+
+export interface CardSupplyWarning {
+  team?: TeamId
+  code: CardSupplyWarningCode
+}
+
+/**
+ * Non-blocking sanity check: is this combination of rank-locked canastas
+ * (aces, deuces, jokers) even possible given how many decks are actually in
+ * play (3 for 4 players, 4 for 6 players)? Uses the most charitable
+ * assumption for each canasta (max wildcards where allowed) — if even that
+ * best case exceeds the deck's supply, it's flagged. This can't check the
+ * generic clean/dirty canasta types (4-K): those aren't tied to one rank in
+ * the data model, so no fixed supply ceiling applies to them.
+ */
+export function checkCardSupply(round: Round, playerCount: PlayerCount): CardSupplyWarning[] {
+  const warnings: CardSupplyWarning[] = []
+  const a = round.entries.A.canastas
+  const b = round.entries.B.canastas
+
+  const cleanAceTotal = a.cleanAce + b.cleanAce
+  const dirtyAceTotal = a.dirtyAce + b.dirtyAce
+  const minAcesNeeded =
+    cleanAceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + dirtyAceTotal * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA
+  if (minAcesNeeded > totalAces(playerCount)) warnings.push({ code: 'aceSupplyExceeded' })
+
+  for (const team of TEAM_IDS) {
+    const canastas = round.entries[team].canastas
+    if (canastas.cleanAce > 0 && canastas.dirtyAce > 0) {
+      warnings.push({ team, code: 'bothAceVariantsSameTeam' })
+    }
+  }
+
+  const jokerCanastaTotal = a.joker + b.joker
+  const cleanDeuceTotal = a.cleanDeuce + b.cleanDeuce
+  const minDeucesNeeded =
+    cleanDeuceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + jokerCanastaTotal * JOKER_CANASTA_DEUCE_COUNT
+  if (minDeucesNeeded > totalDeuces(playerCount)) warnings.push({ code: 'deuceSupplyExceeded' })
+
+  const minJokersNeeded = jokerCanastaTotal * JOKER_CANASTA_JOKER_COUNT
+  if (minJokersNeeded > totalJokers(playerCount)) warnings.push({ code: 'jokerSupplyExceeded' })
+
+  return warnings
 }
 
 export function gameTotals(game: Game): Record<TeamId, number> {
