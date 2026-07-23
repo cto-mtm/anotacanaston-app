@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { parseLocalDate } from '../lib/date'
+import BackButton from '../components/BackButton.vue'
+import TrashIcon from '../components/icons/TrashIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,6 +30,8 @@ function onDelete() {
 
 <template>
   <div v-if="session">
+    <BackButton to="/" />
+
     <div class="mb-6 flex items-start justify-between">
       <div :style="{ viewTransitionName: 'session-' + session.id }">
         <h1
@@ -91,10 +95,12 @@ function onDelete() {
 
     <button
       type="button"
-      class="mt-8 text-sm text-red-600 underline"
+      class="mt-8 flex h-11 w-11 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+      :aria-label="t('sessionDetail.deleteSession')"
+      :title="t('sessionDetail.deleteSession')"
       @click="onDelete"
     >
-      {{ t('sessionDetail.deleteSession') }}
+      <TrashIcon class="h-5 w-5" />
     </button>
   </div>
 </template>

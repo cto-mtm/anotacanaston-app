@@ -7,6 +7,9 @@ import { scoreRound } from '../domain/scoring'
 import ScoreboardHeader from '../components/ScoreboardHeader.vue'
 import ThresholdBanner from '../components/ThresholdBanner.vue'
 import BaseButton from '../components/BaseButton.vue'
+import BackButton from '../components/BackButton.vue'
+import PencilIcon from '../components/icons/PencilIcon.vue'
+import TrashIcon from '../components/icons/TrashIcon.vue'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -30,12 +33,16 @@ function roundTotal(roundIndex: number, team: 'A' | 'B'): number {
 }
 
 function onDeleteRound(roundIndex: number) {
-  sessionsStore.deleteRound(sessionId.value, gameIndex.value, roundIndex)
+  if (confirm(t('gameScreen.confirmDeleteRound'))) {
+    sessionsStore.deleteRound(sessionId.value, gameIndex.value, roundIndex)
+  }
 }
 </script>
 
 <template>
   <div v-if="session && game">
+    <BackButton :to="`/sessions/${sessionId}`" />
+
     <h1 class="mb-4 text-2xl font-bold">
       {{ t('gameScreen.title', { n: gameIndex + 1 }) }}
     </h1>
@@ -117,19 +124,23 @@ function onDeleteRound(roundIndex: number) {
         class="flex items-center justify-between rounded border border-neutral-200 bg-white px-3 py-2 text-sm"
       >
         <span>{{ t('game.team.A') }}: {{ roundTotal(i, 'A') }} · {{ t('game.team.B') }}: {{ roundTotal(i, 'B') }}</span>
-        <span class="flex gap-3">
+        <span class="flex gap-1">
           <RouterLink
             :to="`/sessions/${sessionId}/games/${gameIndex}/rounds/${i}`"
-            class="text-indigo-600 underline"
+            class="flex h-10 w-10 items-center justify-center rounded-lg text-indigo-600 hover:bg-indigo-50"
+            :aria-label="t('gameScreen.editRound')"
+            :title="t('gameScreen.editRound')"
           >
-            {{ t('gameScreen.editRound') }}
+            <PencilIcon class="h-5 w-5" />
           </RouterLink>
           <button
             type="button"
-            class="text-red-600 underline"
+            class="flex h-10 w-10 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+            :aria-label="t('gameScreen.deleteRound')"
+            :title="t('gameScreen.deleteRound')"
             @click="onDeleteRound(i)"
           >
-            {{ t('common.delete') }}
+            <TrashIcon class="h-5 w-5" />
           </button>
         </span>
       </li>
