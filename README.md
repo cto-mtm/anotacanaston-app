@@ -117,3 +117,4 @@ warning and you'll lose the "clean baseline" property.
 - `PLAN.md` — the development plan (phases, domain model, screens)
 - `docs/specs/house-rules.md` — authoritative Canastón scoring rules
 - `docs/architecture.md`, `docs/animations.md`, `docs/i18n.md`
+- `docs/design.md` — visual design system (target audience, palette, typography, tokens)

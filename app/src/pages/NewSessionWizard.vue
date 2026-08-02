@@ -139,71 +139,81 @@ function create() {
 
 <template>
   <div class="mx-auto max-w-xl">
-    <h1 class="mb-4 text-2xl font-bold">
+    <h1 class="mb-5 font-display text-2xl text-walnut">
       {{ t('newSession.title') }}
     </h1>
 
+    <!-- Step indicator -->
+    <div class="mb-6 flex items-center gap-2">
+      <div
+        v-for="s in 4"
+        :key="s"
+        class="h-1.5 flex-1 rounded-full transition-colors"
+        :class="s <= step ? 'bg-wine' : 'bg-rose/40'"
+      />
+    </div>
+
     <!-- Step 1 -->
     <section v-if="step === 1">
-      <h2 class="mb-2 font-semibold">
+      <h2 class="mb-3 font-semibold text-walnut">
         {{ t('newSession.stepPlayerCount') }}
       </h2>
-      <label class="mb-3 block text-sm">
+      <label class="mb-4 block text-sm text-walnut">
         {{ t('newSession.playerCountLabel') }}
-        <div class="mt-1 flex gap-2">
+        <div class="mt-2 flex gap-2">
           <button
             type="button"
-            class="min-h-11 rounded-lg border px-5 py-2.5 text-sm"
-            :class="playerCount === 4 ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300'"
+            class="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+            :class="playerCount === 4 ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
             @click="playerCount = 4"
           >
             {{ t('game.playerCount.4') }}
           </button>
           <button
             type="button"
-            class="min-h-11 rounded-lg border px-5 py-2.5 text-sm"
-            :class="playerCount === 6 ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300'"
+            class="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+            :class="playerCount === 6 ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
             @click="playerCount = 6"
           >
             {{ t('game.playerCount.6') }}
           </button>
         </div>
       </label>
-      <label class="block text-sm">
+      <label class="block text-sm text-walnut">
         {{ t('newSession.dateLabel') }}
         <input
           v-model="date"
           type="date"
-          class="mt-1 block w-full rounded border border-neutral-300 px-3 py-2.5 text-base"
+          class="mt-1 block w-full rounded-xl border border-rose/40 bg-ivory px-4 py-2.5 text-base text-walnut focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine/30"
         >
       </label>
     </section>
 
     <!-- Step 2 -->
     <section v-else-if="step === 2">
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-semibold text-walnut">
         {{ t('newSession.stepNames') }}
       </h2>
-      <p class="mb-3 text-sm text-neutral-500">
+      <p class="mb-4 text-sm text-clay">
         {{ t('newSession.seatOrderHint') }}
       </p>
       <div
         v-for="(player, i) in players"
         :key="player.id"
-        class="mb-2"
+        class="mb-3"
       >
-        <label class="block text-sm">
+        <label class="block text-sm text-walnut">
           {{ t('newSession.playerNameLabel', { n: i + 1 }) }}
           <input
             v-model="player.name"
             type="text"
-            class="mt-1 block w-full rounded border border-neutral-300 px-3 py-2.5 text-base"
+            class="mt-1 block w-full rounded-xl border border-rose/40 bg-ivory px-4 py-2.5 text-base text-walnut focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine/30"
           >
         </label>
       </div>
       <p
         v-if="!namesValid"
-        class="text-sm text-red-600"
+        class="text-sm font-medium text-wine"
       >
         {{ t('newSession.validation.needUniqueNames') }}
       </p>
@@ -211,10 +221,10 @@ function create() {
 
     <!-- Step 3 -->
     <section v-else-if="step === 3">
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-semibold text-walnut">
         {{ t('newSession.stepMano') }}
       </h2>
-      <p class="mb-3 text-sm text-neutral-500">
+      <p class="mb-4 text-sm text-clay">
         {{ t('newSession.manoHint') }}
       </p>
       <PlayerPicker
@@ -224,10 +234,10 @@ function create() {
       />
 
       <template v-if="manoId">
-        <h3 class="mb-1 mt-4 text-sm font-medium">
+        <h3 class="mb-1 mt-5 text-sm font-semibold text-walnut">
           {{ t('newSession.dealerLabel') }}
         </h3>
-        <p class="mb-2 text-xs text-neutral-500">
+        <p class="mb-2 text-xs text-clay">
           {{ t('newSession.dealerAutoHint') }}
         </p>
         <PlayerPicker
@@ -241,12 +251,12 @@ function create() {
 
     <!-- Step 4 -->
     <section v-else-if="step === 4">
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-semibold text-walnut">
         {{ t('newSession.stepPartnership') }}
       </h2>
 
       <template v-if="playerCount === 4">
-        <p class="mb-2 text-sm text-neutral-500">
+        <p class="mb-3 text-sm text-clay">
           {{ t('newSession.choosePartner') }}
         </p>
         <PlayerPicker
@@ -258,23 +268,23 @@ function create() {
 
         <div
           v-if="fourPlayerPreview"
-          class="mt-4"
+          class="mt-5"
         >
-          <h3 class="mb-2 text-sm font-medium">
+          <h3 class="mb-2 text-sm font-semibold text-walnut">
             {{ t('newSession.schedulePreview') }}
           </h3>
           <ol class="space-y-2">
             <li
               v-for="(game, i) in fourPlayerPreview"
               :key="i"
-              class="rounded border border-neutral-200 p-2 text-sm"
+              class="rounded-xl border border-rose/40 bg-linen p-3 text-sm"
             >
-              <p class="font-medium">
+              <p class="font-semibold text-walnut">
                 {{ t('newSession.gameLabel', { n: i + 1 }) }}
               </p>
-              <p>{{ t('game.team.A') }}: {{ game.partnership.A.map(playerName).join(' / ') }}</p>
-              <p>{{ t('game.team.B') }}: {{ game.partnership.B.map(playerName).join(' / ') }}</p>
-              <p class="text-neutral-500">
+              <p class="text-walnut">{{ t('game.team.A') }}: {{ game.partnership.A.map(playerName).join(' / ') }}</p>
+              <p class="text-walnut">{{ t('game.team.B') }}: {{ game.partnership.B.map(playerName).join(' / ') }}</p>
+              <p class="text-clay">
                 {{ t('newSession.dealerLabel') }}: {{ playerName(game.dealerId) }}
               </p>
             </li>
@@ -283,22 +293,22 @@ function create() {
       </template>
 
       <template v-else>
-        <p class="mb-2 text-sm text-neutral-500">
+        <p class="mb-3 text-sm text-clay">
           {{ t('newSession.assignTeams') }}
         </p>
         <div
           v-for="(game, i) in sixPlayerGames"
           :key="i"
-          class="mb-4 rounded border border-neutral-200 p-3"
+          class="mb-4 rounded-2xl border border-rose/40 bg-linen p-4"
         >
           <div class="mb-2 flex items-center justify-between">
-            <p class="text-sm font-medium">
+            <p class="text-sm font-semibold text-walnut">
               {{ t('newSession.gameLabel', { n: i + 1 }) }}
             </p>
             <button
               v-if="sixPlayerGames.length > 1"
               type="button"
-              class="text-xs text-red-600 underline"
+              class="text-xs font-medium text-wine underline"
               @click="removeGame(i)"
             >
               {{ t('newSession.removeGame') }}
@@ -309,8 +319,8 @@ function create() {
             :model-value="game.partnership"
             :team-size="3"
           />
-          <div class="mt-2">
-            <p class="mb-1 text-xs text-neutral-500">
+          <div class="mt-3">
+            <p class="mb-1 text-xs text-clay">
               {{ t('newSession.dealerLabel') }}
             </p>
             <PlayerPicker
@@ -320,7 +330,10 @@ function create() {
             />
           </div>
         </div>
-        <BaseButton @click="addGame">
+        <BaseButton
+          variant="secondary"
+          @click="addGame"
+        >
           {{ t('newSession.addGame') }}
         </BaseButton>
       </template>
@@ -329,6 +342,7 @@ function create() {
     <div class="mt-6 flex justify-between">
       <BaseButton
         v-if="step > 1"
+        variant="secondary"
         @click="back"
       >
         {{ t('common.back') }}

@@ -99,7 +99,7 @@ function save() {
 
 <template>
   <div v-if="session && game">
-    <h1 class="mb-4 text-2xl font-bold">
+    <h1 class="mb-5 font-display text-2xl text-walnut">
       {{ t(isEdit ? 'roundEntry.editTitle' : 'roundEntry.title') }}
     </h1>
 
@@ -107,16 +107,16 @@ function save() {
     <div class="mb-4 flex gap-2 md:hidden">
       <button
         type="button"
-        class="flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium"
-        :class="activeTeam === 'A' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300 bg-white text-neutral-700'"
+        class="flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+        :class="activeTeam === 'A' ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
         @click="activeTeam = 'A'"
       >
         {{ t('game.team.A') }}
       </button>
       <button
         type="button"
-        class="flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium"
-        :class="activeTeam === 'B' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-neutral-300 bg-white text-neutral-700'"
+        class="flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+        :class="activeTeam === 'B' ? 'border-sage bg-sage text-white shadow-sm shadow-sage/20' : 'border-rose/40 bg-linen text-walnut'"
         @click="activeTeam = 'B'"
       >
         {{ t('game.team.B') }}
@@ -132,7 +132,7 @@ function save() {
         />
         <p
           v-if="noCanastasClosed(entriesA)"
-          class="mt-2 text-sm text-amber-700"
+          class="mt-2 text-sm text-gold"
         >
           {{ t('roundEntry.noCanastasWarning') }}
         </p>
@@ -150,7 +150,7 @@ function save() {
         />
         <p
           v-if="noCanastasClosed(entriesB)"
-          class="mt-2 text-sm text-amber-700"
+          class="mt-2 text-sm text-gold"
         >
           {{ t('roundEntry.noCanastasWarning') }}
         </p>
@@ -164,7 +164,7 @@ function save() {
 
     <div
       v-if="!validation.valid"
-      class="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      class="mt-5 rounded-2xl border border-wine/30 bg-wine-light p-4 text-sm text-wine"
     >
       <ul class="mb-2 list-inside list-disc">
         <li
@@ -187,9 +187,9 @@ function save() {
 
     <div
       v-if="cardSupplyWarnings.length > 0"
-      class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+      class="mt-5 rounded-2xl border border-gold/30 bg-gold-light p-4 text-sm text-gold"
     >
-      <p class="mb-2 font-medium">
+      <p class="mb-2 font-semibold">
         {{ t('roundEntry.cardSupplyTitle') }}
       </p>
       <ul class="list-inside list-disc">

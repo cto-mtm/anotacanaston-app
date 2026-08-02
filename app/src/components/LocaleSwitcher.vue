@@ -17,7 +17,7 @@ function toggle() {
 <template>
   <button
     type="button"
-    class="min-h-11 min-w-11 rounded border border-neutral-300 px-3 text-sm font-medium uppercase text-neutral-600 hover:bg-neutral-100"
+    class="min-h-11 min-w-11 rounded-xl border border-rose/40 bg-linen px-3 text-sm font-semibold uppercase text-clay transition-colors hover:bg-rose/30"
     @click="toggle"
   >
     {{ locale }}

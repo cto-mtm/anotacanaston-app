@@ -43,7 +43,7 @@ function onDeleteRound(roundIndex: number) {
   <div v-if="session && game">
     <BackButton :to="`/sessions/${sessionId}`" />
 
-    <h1 class="mb-4 text-2xl font-bold">
+    <h1 class="mb-5 font-display text-2xl text-walnut">
       {{ t('gameScreen.title', { n: gameIndex + 1 }) }}
     </h1>
 
@@ -55,9 +55,9 @@ function onDeleteRound(roundIndex: number) {
 
     <div
       v-if="result.finished"
-      class="my-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800"
+      class="my-5 rounded-2xl border border-sage/30 bg-sage-light p-4 text-sage"
     >
-      <p class="font-medium">
+      <p class="font-semibold">
         {{ t('gameScreen.finished') }}
       </p>
       <p v-if="result.winner">
@@ -79,7 +79,7 @@ function onDeleteRound(roundIndex: number) {
       </RouterLink>
     </div>
 
-    <div class="my-4 grid grid-cols-2 gap-4">
+    <div class="my-5 grid grid-cols-2 gap-4">
       <ThresholdBanner
         team="A"
         :threshold="thresholds.A"
@@ -90,17 +90,17 @@ function onDeleteRound(roundIndex: number) {
       />
     </div>
 
-    <details class="mb-4 rounded-lg border border-neutral-200 bg-white p-3 text-sm">
-      <summary class="cursor-pointer font-medium">
+    <details class="mb-5 rounded-2xl border border-rose/40 bg-linen p-4 text-sm">
+      <summary class="cursor-pointer font-medium text-walnut">
         {{ t('gameScreen.pilonTriadoInfo') }}
       </summary>
-      <p class="mt-2 text-neutral-600">
+      <p class="mt-2 text-clay">
         {{ t('gameScreen.pilonTriadoBody') }}
       </p>
     </details>
 
     <div class="mb-4 flex items-center justify-between">
-      <h2 class="font-semibold">
+      <h2 class="font-display text-lg text-walnut">
         {{ t('gameScreen.roundHistory') }}
       </h2>
       <RouterLink :to="`/sessions/${sessionId}/games/${gameIndex}/rounds/new`">
@@ -110,7 +110,7 @@ function onDeleteRound(roundIndex: number) {
 
     <p
       v-if="game.rounds.length === 0"
-      class="text-neutral-500"
+      class="text-clay"
     >
       {{ t('gameScreen.noRounds') }}
     </p>
@@ -121,13 +121,13 @@ function onDeleteRound(roundIndex: number) {
       <li
         v-for="(_round, i) in game.rounds"
         :key="i"
-        class="flex items-center justify-between rounded border border-neutral-200 bg-white px-3 py-2 text-sm"
+        class="flex items-center justify-between rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
       >
-        <span>{{ t('game.team.A') }}: {{ roundTotal(i, 'A') }} · {{ t('game.team.B') }}: {{ roundTotal(i, 'B') }}</span>
+        <span class="text-walnut">{{ t('game.team.A') }}: {{ roundTotal(i, 'A') }} · {{ t('game.team.B') }}: {{ roundTotal(i, 'B') }}</span>
         <span class="flex gap-1">
           <RouterLink
             :to="`/sessions/${sessionId}/games/${gameIndex}/rounds/${i}`"
-            class="flex h-10 w-10 items-center justify-center rounded-lg text-indigo-600 hover:bg-indigo-50"
+            class="flex h-10 w-10 items-center justify-center rounded-xl text-clay transition-colors hover:bg-rose/30 hover:text-walnut"
             :aria-label="t('gameScreen.editRound')"
             :title="t('gameScreen.editRound')"
           >
@@ -135,7 +135,7 @@ function onDeleteRound(roundIndex: number) {
           </RouterLink>
           <button
             type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+            class="flex h-10 w-10 items-center justify-center rounded-xl text-wine/70 transition-colors hover:bg-wine-light hover:text-wine"
             :aria-label="t('gameScreen.deleteRound')"
             :title="t('gameScreen.deleteRound')"
             @click="onDeleteRound(i)"

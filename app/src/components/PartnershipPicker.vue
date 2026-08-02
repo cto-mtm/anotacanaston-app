@@ -37,11 +37,11 @@ function cycle(id: PlayerId) {
         v-for="player in players"
         :key="player.id"
         type="button"
-        class="min-h-11 rounded-full border px-4 py-2.5 text-sm transition-colors"
+        class="min-h-11 rounded-full border px-5 py-2.5 text-sm font-medium transition-all active:scale-95"
         :class="{
-          'border-indigo-600 bg-indigo-600 text-white': teamOf(player.id) === 'A',
-          'border-rose-600 bg-rose-600 text-white': teamOf(player.id) === 'B',
-          'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100': teamOf(player.id) === null,
+          'border-wine bg-wine text-white shadow-sm shadow-wine/20': teamOf(player.id) === 'A',
+          'border-sage bg-sage text-white shadow-sm shadow-sage/20': teamOf(player.id) === 'B',
+          'border-rose/40 bg-linen text-walnut hover:bg-rose/30': teamOf(player.id) === null,
         }"
         @click="cycle(player.id)"
       >
@@ -52,7 +52,7 @@ function cycle(id: PlayerId) {
         >({{ t(`game.team.${teamOf(player.id)}`) }})</span>
       </button>
     </div>
-    <p class="mt-2 text-xs text-neutral-500">
+    <p class="mt-2 text-xs text-clay">
       {{ t('game.team.A') }}: {{ modelValue.A.length }}/{{ teamSize }} ·
       {{ t('game.team.B') }}: {{ modelValue.B.length }}/{{ teamSize }}
     </p>

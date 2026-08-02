@@ -35,39 +35,39 @@ function onDelete() {
     <div class="mb-6 flex items-start justify-between">
       <div :style="{ viewTransitionName: 'session-' + session.id }">
         <h1
-          class="text-2xl font-bold"
+          class="font-display text-2xl text-walnut"
           :style="{ viewTransitionName: 'session-title-' + session.id }"
         >
           {{ d(parseLocalDate(session.date), 'short') }}
         </h1>
-        <p class="text-sm text-neutral-500">
+        <p class="text-sm text-clay">
           {{ t(`game.playerCount.${session.playerCount}`) }}
         </p>
       </div>
       <RouterLink
         v-if="session.status === 'finished'"
         :to="`/sessions/${session.id}/summary`"
-        class="text-sm text-indigo-600 hover:underline"
+        class="text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
       >
         {{ t('sessionDetail.viewSummary') }}
       </RouterLink>
     </div>
 
-    <h2 class="mb-2 font-semibold">
+    <h2 class="mb-2 font-display text-lg text-walnut">
       {{ t('summary.individualTallies') }}
     </h2>
-    <ul class="mb-6 grid grid-cols-2 gap-1 text-sm sm:grid-cols-3">
+    <ul class="mb-6 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
       <li
         v-for="player in session.players"
         :key="player.id"
-        class="flex justify-between rounded border border-neutral-200 px-2 py-1"
+        class="flex justify-between rounded-xl border border-rose/40 bg-linen px-3 py-2"
       >
-        <span>{{ player.name }}</span>
-        <span class="tabular-nums text-neutral-500">{{ tallies[player.id] ?? 0 }}</span>
+        <span class="text-walnut">{{ player.name }}</span>
+        <span class="tabular-nums text-clay">{{ tallies[player.id] ?? 0 }}</span>
       </li>
     </ul>
 
-    <h2 class="mb-2 font-semibold">
+    <h2 class="mb-2 font-display text-lg text-walnut">
       {{ t('sessionDetail.gamesTitle') }}
     </h2>
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -75,18 +75,18 @@ function onDelete() {
         v-for="(_game, i) in session.games"
         :key="i"
         :to="gameLink(i)"
-        class="rounded-lg border border-neutral-200 bg-white p-3 hover:border-indigo-300"
+        class="rounded-2xl border border-rose/40 bg-linen p-4 transition-all hover:border-wine/40 hover:shadow-sm hover:shadow-walnut/5"
       >
-        <p class="font-medium">
+        <p class="font-semibold text-walnut">
           {{ t('gameScreen.title', { n: i + 1 }) }}
         </p>
-        <p class="text-sm text-neutral-500">
+        <p class="text-sm text-clay">
           {{ t('game.team.A') }} {{ sessionsStore.getGameTotals(session.id, i).A }} —
           {{ t('game.team.B') }} {{ sessionsStore.getGameTotals(session.id, i).B }}
         </p>
         <p
           v-if="sessionsStore.getGameResult(session.id, i).finished"
-          class="text-xs text-green-600"
+          class="text-xs font-medium text-sage"
         >
           {{ t('gameScreen.finished') }}
         </p>
@@ -95,7 +95,7 @@ function onDelete() {
 
     <button
       type="button"
-      class="mt-8 flex h-11 w-11 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+      class="mt-8 flex h-11 w-11 items-center justify-center rounded-xl text-wine/60 transition-colors hover:bg-wine-light hover:text-wine"
       :aria-label="t('sessionDetail.deleteSession')"
       :title="t('sessionDetail.deleteSession')"
       @click="onDelete"

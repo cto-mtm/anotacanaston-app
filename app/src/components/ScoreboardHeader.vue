@@ -21,15 +21,19 @@ function namesFor(team: TeamId): string {
     <div
       v-for="team in (['A', 'B'] as const)"
       :key="team"
-      class="rounded-xl border border-neutral-200 bg-white p-4 text-center"
+      class="rounded-2xl border p-5 text-center"
+      :class="team === 'A' ? 'border-wine/30 bg-wine-light' : 'border-sage/30 bg-sage-light'"
     >
-      <p class="text-sm font-medium text-neutral-500">
+      <p
+        class="text-sm font-semibold"
+        :class="team === 'A' ? 'text-wine' : 'text-sage'"
+      >
         {{ t(`game.team.${team}`) }}
       </p>
-      <p class="mb-1 text-xs text-neutral-400">
+      <p class="mb-1 text-xs text-clay">
         {{ namesFor(team) }}
       </p>
-      <p class="text-3xl font-bold tabular-nums">
+      <p class="font-display text-3xl text-walnut tabular-nums">
         {{ totals[team] }}
       </p>
     </div>

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
+    "dev:remote": "set TAILSCALE_HOST=ks-mini.tail0293ef.ts.net&& set TAILSCALE_PORT=55548&& vite --host 0.0.0.0 --port 51738",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -20,6 +21,7 @@
     "@capacitor/ios": "^7.4.0",
     "@capacitor/keyboard": "^7.0.0",
     "@capacitor/status-bar": "^7.0.0",
+    "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource/fondamento": "^5.3.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.24",

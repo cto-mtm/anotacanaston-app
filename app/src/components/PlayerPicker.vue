@@ -20,11 +20,11 @@ function isExcluded(id: PlayerId): boolean {
       :key="player.id"
       type="button"
       :disabled="isExcluded(player.id)"
-      class="min-h-11 rounded-full border px-4 py-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+      class="min-h-11 rounded-full border px-5 py-2.5 text-sm font-medium transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
       :class="
         modelValue === player.id
-          ? 'border-indigo-600 bg-indigo-600 text-white'
-          : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100'
+          ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20'
+          : 'border-rose/40 bg-linen text-walnut hover:bg-rose/30'
       "
       @click="emit('update:modelValue', player.id)"
     >

@@ -10,8 +10,8 @@ const sessionsStore = useSessionsStore()
 
 <template>
   <div>
-    <div class="mb-4 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="font-display text-2xl text-walnut">
         {{ t('home.title') }}
       </h1>
       <RouterLink to="/sessions/new">
@@ -21,7 +21,7 @@ const sessionsStore = useSessionsStore()
 
     <p
       v-if="sessionsStore.sessions.length === 0"
-      class="text-neutral-500"
+      class="text-clay"
     >
       {{ t('home.empty') }}
     </p>

@@ -6,15 +6,15 @@ const { t } = useI18n()
 
 <template>
   <div class="text-center">
-    <h1 class="mb-2 text-2xl font-bold">
+    <h1 class="mb-2 font-display text-2xl text-walnut">
       {{ t('notFound.title') }}
     </h1>
-    <p class="mb-4 text-neutral-600">
+    <p class="mb-4 text-clay">
       {{ t('notFound.message') }}
     </p>
     <RouterLink
       to="/"
-      class="text-indigo-600 hover:underline"
+      class="text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
     >
       {{ t('notFound.homeLink') }}
     </RouterLink>

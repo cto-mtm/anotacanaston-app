@@ -30,19 +30,19 @@ function continueOffline() {
         alt="Anota Canaston"
         class="h-24 w-24"
       >
-      <h1 class="text-3xl font-bold">
+      <h1 class="font-display text-3xl text-walnut">
         Anota Canaston
       </h1>
-      <p class="text-neutral-600">
+      <p class="text-clay">
         {{ t('welcome.tagline') }}
       </p>
     </div>
 
-    <section class="w-full rounded-xl border border-neutral-200 bg-white p-6">
-      <h2 class="text-lg font-semibold">
+    <section class="w-full rounded-2xl border border-rose/40 bg-linen p-6 shadow-sm shadow-walnut/5">
+      <h2 class="font-display text-lg text-walnut">
         {{ t('welcome.offlineTitle') }}
       </h2>
-      <p class="mt-1 text-sm text-neutral-600">
+      <p class="mt-1 text-sm text-clay">
         {{ t('welcome.offlineBody') }}
       </p>
       <BaseButton
@@ -53,16 +53,16 @@ function continueOffline() {
       </BaseButton>
     </section>
 
-    <section class="w-full rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6">
+    <section class="w-full rounded-2xl border border-dashed border-rose/60 bg-ivory p-6">
       <div class="flex items-center justify-center gap-2">
-        <h2 class="text-lg font-semibold text-neutral-700">
+        <h2 class="font-display text-lg text-clay">
           {{ t('welcome.cloudTitle') }}
         </h2>
-        <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+        <span class="rounded-full bg-wine-light px-2.5 py-0.5 text-xs font-medium text-wine">
           {{ t('welcome.comingSoon') }}
         </span>
       </div>
-      <p class="mt-1 text-sm text-neutral-600">
+      <p class="mt-1 text-sm text-clay">
         {{ t('welcome.cloudBody') }}
       </p>
       <BaseButton

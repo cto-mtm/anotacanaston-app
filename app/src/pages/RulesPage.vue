@@ -44,163 +44,171 @@ const CARD_POINT_ROWS = [
 
 <template>
   <div class="mx-auto max-w-2xl space-y-8">
-    <h1 class="text-2xl font-bold">
+    <h1 class="font-display text-2xl text-walnut">
       {{ t('rules.title') }}
     </h1>
 
     <section>
-      <h2 class="mb-2 font-semibold">
+      <h2 class="mb-3 font-display text-lg text-walnut">
         {{ t('rules.thresholdsTitle') }}
       </h2>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-neutral-500">
-            <th class="py-1">
-              {{ t('rules.thresholdsCumulative') }}
-            </th>
-            <th class="py-1">
-              {{ t('rules.thresholdsMinimum') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in thresholdRows"
-            :key="row.range"
-            class="border-t border-neutral-100"
-          >
-            <td class="py-1">
-              {{ row.range }}
-            </td>
-            <td class="py-1 tabular-nums">
-              {{ row.points }}
-              <span
-                v-if="row.cleanOnly"
-                class="text-xs text-amber-700"
-              >({{ t('rules.cleanOnlyNote') }})</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-hidden rounded-xl border border-rose/40 bg-linen">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-rose/30 text-left text-clay">
+              <th class="px-4 py-2.5">
+                {{ t('rules.thresholdsCumulative') }}
+              </th>
+              <th class="px-4 py-2.5">
+                {{ t('rules.thresholdsMinimum') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in thresholdRows"
+              :key="row.range"
+              class="border-t border-rose/20"
+            >
+              <td class="px-4 py-2.5 text-walnut">
+                {{ row.range }}
+              </td>
+              <td class="px-4 py-2.5 tabular-nums text-walnut">
+                {{ row.points }}
+                <span
+                  v-if="row.cleanOnly"
+                  class="text-xs font-medium text-gold"
+                >({{ t('rules.cleanOnlyNote') }})</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section>
-      <h2 class="mb-2 font-semibold">
+      <h2 class="mb-3 font-display text-lg text-walnut">
         {{ t('rules.honorsTitle') }}
       </h2>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-neutral-500">
-            <th class="py-1">
-              {{ t('game.honors') }}
-            </th>
-            <th class="py-1">
-              {{ t('rules.honorsBothClosed') }}
-            </th>
-            <th class="py-1">
-              {{ t('rules.honorsCleanOnly') }}
-            </th>
-            <th class="py-1">
-              {{ t('rules.honorsDirtyOrNone') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in honorsRows"
-            :key="row.count"
-            class="border-t border-neutral-100"
-          >
-            <td class="py-1">
-              {{ row.count }}
-            </td>
-            <td class="py-1 tabular-nums">
-              {{ row.both }}
-            </td>
-            <td class="py-1 tabular-nums">
-              {{ row.cleanOnly }}
-            </td>
-            <td class="py-1 tabular-nums">
-              {{ row.other }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-hidden rounded-xl border border-rose/40 bg-linen">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-rose/30 text-left text-clay">
+              <th class="px-4 py-2.5">
+                {{ t('game.honors') }}
+              </th>
+              <th class="px-4 py-2.5">
+                {{ t('rules.honorsBothClosed') }}
+              </th>
+              <th class="px-4 py-2.5">
+                {{ t('rules.honorsCleanOnly') }}
+              </th>
+              <th class="px-4 py-2.5">
+                {{ t('rules.honorsDirtyOrNone') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in honorsRows"
+              :key="row.count"
+              class="border-t border-rose/20"
+            >
+              <td class="px-4 py-2.5 text-walnut">
+                {{ row.count }}
+              </td>
+              <td class="px-4 py-2.5 tabular-nums text-walnut">
+                {{ row.both }}
+              </td>
+              <td class="px-4 py-2.5 tabular-nums text-walnut">
+                {{ row.cleanOnly }}
+              </td>
+              <td class="px-4 py-2.5 tabular-nums text-walnut">
+                {{ row.other }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section>
-      <h2 class="mb-2 font-semibold">
+      <h2 class="mb-3 font-display text-lg text-walnut">
         {{ t('rules.canastaValuesTitle') }}
       </h2>
-      <table class="w-full text-sm">
-        <tbody>
-          <tr
-            v-for="type in ALL_CANASTA_TYPES"
-            :key="type"
-            class="border-t border-neutral-100"
-          >
-            <td class="py-1">
-              {{ t(`game.canastaType.${type}`) }}
-            </td>
-            <td class="py-1 text-right tabular-nums">
-              {{ CANASTA_VALUES[type] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p class="mt-2 text-sm text-neutral-600">
+      <div class="overflow-hidden rounded-xl border border-rose/40 bg-linen">
+        <table class="w-full text-sm">
+          <tbody>
+            <tr
+              v-for="type in ALL_CANASTA_TYPES"
+              :key="type"
+              class="border-t border-rose/20 first:border-t-0"
+            >
+              <td class="px-4 py-2.5 text-walnut">
+                {{ t(`game.canastaType.${type}`) }}
+              </td>
+              <td class="px-4 py-2.5 text-right tabular-nums text-walnut">
+                {{ CANASTA_VALUES[type] }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-3 text-sm text-clay">
         {{ t('rules.canastonBody') }}
       </p>
-      <p class="text-sm text-neutral-600">
+      <p class="text-sm text-clay">
         {{ t('rules.superCanastonBody') }}
       </p>
     </section>
 
     <section>
-      <h2 class="mb-2 font-semibold">
+      <h2 class="mb-3 font-display text-lg text-walnut">
         {{ t('rules.cardPointsTitle') }}
       </h2>
-      <table class="w-full text-sm">
-        <tbody>
-          <tr
-            v-for="row in CARD_POINT_ROWS"
-            :key="row.labelKey"
-            class="border-t border-neutral-100"
-          >
-            <td class="py-1">
-              {{ t(row.labelKey) }}
-            </td>
-            <td class="py-1 text-right tabular-nums">
-              {{ row.points }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-hidden rounded-xl border border-rose/40 bg-linen">
+        <table class="w-full text-sm">
+          <tbody>
+            <tr
+              v-for="row in CARD_POINT_ROWS"
+              :key="row.labelKey"
+              class="border-t border-rose/20 first:border-t-0"
+            >
+              <td class="px-4 py-2.5 text-walnut">
+                {{ t(row.labelKey) }}
+              </td>
+              <td class="px-4 py-2.5 text-right tabular-nums text-walnut">
+                {{ row.points }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section>
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-display text-lg text-walnut">
         {{ t('rules.goingOutTitle') }}
       </h2>
-      <p class="text-sm text-neutral-600">
+      <p class="text-sm text-clay">
         {{ t('rules.goingOutBody') }}
       </p>
     </section>
 
     <section>
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-display text-lg text-walnut">
         {{ t('rules.blackThreesTitle') }}
       </h2>
-      <p class="text-sm text-neutral-600">
+      <p class="text-sm text-clay">
         {{ t('rules.blackThreesBody') }}
       </p>
     </section>
 
     <section>
-      <h2 class="mb-1 font-semibold">
+      <h2 class="mb-1 font-display text-lg text-walnut">
         {{ t('rules.pilonTriadoTitle') }}
       </h2>
-      <p class="text-sm text-neutral-600">
+      <p class="text-sm text-clay">
         {{ t('rules.pilonTriadoBody') }}
       </p>
     </section>

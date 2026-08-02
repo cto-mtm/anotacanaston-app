@@ -66,11 +66,40 @@
 .mobile-menu-enter-active,
 .mobile-menu-leave-active {
   transition:
-    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .mobile-menu-enter-from,
 .mobile-menu-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+/* Recipe 6 — staggered nav item entrance when menu opens.
+   Each nav-stagger-N delays its appearance for a cascade feel. */
+.mobile-menu-enter-active .nav-stagger-1 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms both;
+}
+.mobile-menu-enter-active .nav-stagger-2 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 140ms both;
+}
+.mobile-menu-enter-active .nav-stagger-3 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both;
+}
+.mobile-menu-enter-active .nav-stagger-4 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 260ms both;
+}
+.mobile-menu-enter-active .nav-stagger-5 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 320ms both;
+}
+
+@keyframes nav-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

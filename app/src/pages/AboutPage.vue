@@ -17,31 +17,35 @@ onMounted(execute)
 
 <template>
   <div>
-    <h1 class="mb-4 text-2xl font-bold">
+    <h1 class="mb-5 font-display text-2xl text-walnut">
       {{ t('about.title') }}
     </h1>
 
-    <p v-if="loading">
+    <p
+      v-if="loading"
+      class="text-clay"
+    >
       {{ t('common.loading') }}
     </p>
     <p
       v-else-if="error"
-      class="text-red-600"
+      class="font-medium text-wine"
     >
       {{ t('common.error') }}: {{ error }}
     </p>
     <div
       v-else-if="data?.ok"
-      class="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800"
+      class="rounded-2xl border border-sage/30 bg-sage-light p-5 text-sage"
     >
-      <p>{{ t('about.healthy') }}</p>
-      <p class="mt-1 text-xs text-green-600">
+      <p class="font-medium">{{ t('about.healthy') }}</p>
+      <p class="mt-1 text-xs opacity-80">
         {{ data.ts }}
       </p>
     </div>
 
     <BaseButton
-      class="mt-4"
+      class="mt-5"
+      variant="secondary"
       @click="execute"
     >
       {{ t('about.checkHealth') }}

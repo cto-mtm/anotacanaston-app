@@ -9,19 +9,19 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
-    <p class="font-medium text-amber-800">
+  <div class="rounded-xl border border-gold/30 bg-gold-light p-3 text-sm">
+    <p class="font-semibold text-gold">
       {{ t('gameScreen.meldThreshold') }} — {{ t(`game.team.${team}`) }}: {{ threshold.points }}
     </p>
     <p
       v-if="threshold.cleanOnly"
-      class="mt-1 text-amber-700"
+      class="mt-1 text-clay"
     >
       {{ t('gameScreen.cleanOnlyNote') }}
     </p>
     <RouterLink
       to="/rules"
-      class="mt-1 inline-block text-xs text-amber-700 underline"
+      class="mt-1 inline-block text-xs text-gold underline transition-colors hover:text-walnut"
     >
       {{ t('shell.navRules') }}
     </RouterLink>

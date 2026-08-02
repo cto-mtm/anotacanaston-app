@@ -18,8 +18,8 @@ const LINES: Array<{ key: keyof RoundScoreBreakdown; labelKey: string }> = [
 </script>
 
 <template>
-  <div class="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm">
-    <p class="mb-2 font-medium text-neutral-700">
+  <div class="rounded-xl border border-rose/40 bg-linen p-4 text-sm">
+    <p class="mb-2 font-semibold text-walnut">
       {{ teamLabel }} — {{ t('roundEntry.preview') }}
     </p>
     <dl class="space-y-1">
@@ -28,17 +28,17 @@ const LINES: Array<{ key: keyof RoundScoreBreakdown; labelKey: string }> = [
         :key="line.key"
         class="flex justify-between"
       >
-        <dt class="text-neutral-500">
+        <dt class="text-clay">
           {{ t(line.labelKey) }}
         </dt>
         <dd
           class="tabular-nums"
-          :class="Number(breakdown[line.key]) < 0 ? 'text-red-600' : 'text-neutral-800'"
+          :class="Number(breakdown[line.key]) < 0 ? 'text-wine font-medium' : 'text-walnut'"
         >
           {{ breakdown[line.key] }}
         </dd>
       </div>
-      <div class="flex justify-between border-t border-neutral-200 pt-1 font-semibold">
+      <div class="flex justify-between border-t border-rose/40 pt-1 font-semibold text-walnut">
         <dt>{{ t('common.total') }}</dt>
         <dd class="tabular-nums">
           {{ breakdown.total }}

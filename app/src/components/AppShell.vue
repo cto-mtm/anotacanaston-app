@@ -27,8 +27,8 @@ watch(menuOpen, (open) => {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col bg-neutral-50 text-neutral-900">
-    <header class="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 pt-4 pb-3 backdrop-blur">
+  <div class="flex min-h-screen flex-col">
+    <header class="sticky top-0 z-20 flex items-center justify-between border-b border-rose/40 bg-ivory/90 px-5 pt-4 pb-3 backdrop-blur">
       <RouterLink
         to="/"
         class="flex items-center gap-2"
@@ -36,29 +36,29 @@ watch(menuOpen, (open) => {
         <img
           :src="logo"
           alt="Anota Canaston"
-          class="h-8 w-8"
+          class="h-9 w-9"
         >
-        <span class="hidden text-lg font-semibold sm:inline">Anota Canaston</span>
+        <span class="hidden font-display text-lg text-walnut sm:inline">Anota Canaston</span>
       </RouterLink>
 
       <!-- Desktop nav -->
-      <div class="hidden items-center gap-4 sm:flex">
-        <nav class="flex gap-4 text-sm font-medium">
+      <div class="hidden items-center gap-5 sm:flex">
+        <nav class="flex gap-5 text-sm font-medium text-clay">
           <RouterLink
             to="/"
-            class="hover:text-indigo-600"
+            class="transition-colors hover:text-wine"
           >
             {{ t('shell.navSessions') }}
           </RouterLink>
           <RouterLink
             to="/rules"
-            class="hover:text-indigo-600"
+            class="transition-colors hover:text-wine"
           >
             {{ t('shell.navRules') }}
           </RouterLink>
           <RouterLink
             to="/about"
-            class="hover:text-indigo-600"
+            class="transition-colors hover:text-wine"
           >
             {{ t('shell.navAbout') }}
           </RouterLink>
@@ -66,7 +66,7 @@ watch(menuOpen, (open) => {
         <RouterLink
           v-if="account.mode === 'offline'"
           to="/welcome"
-          class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200"
+          class="rounded-full bg-gold-light px-2.5 py-1 text-xs font-medium text-gold transition-colors hover:bg-gold/20"
           :title="t('shell.navAccount')"
         >
           {{ t('shell.offlineBadge') }}
@@ -77,7 +77,7 @@ watch(menuOpen, (open) => {
       <!-- Mobile hamburger toggle -->
       <button
         type="button"
-        class="flex h-11 w-11 items-center justify-center rounded-lg text-neutral-700 hover:bg-neutral-100 sm:hidden"
+        class="flex h-11 w-11 items-center justify-center rounded-xl text-walnut transition-colors hover:bg-linen sm:hidden"
         :aria-label="t('shell.openMenu')"
         aria-haspopup="true"
         :aria-expanded="menuOpen"
@@ -96,7 +96,7 @@ watch(menuOpen, (open) => {
       </button>
     </header>
 
-    <main class="flex-1 px-4 py-6">
+    <main class="flex-1 px-5 py-6">
       <slot />
     </main>
 
@@ -104,25 +104,15 @@ watch(menuOpen, (open) => {
     <Transition name="mobile-menu">
       <div
         v-if="menuOpen"
-        class="fixed inset-0 z-30 flex flex-col bg-white sm:hidden"
+        class="fixed inset-0 z-30 flex flex-col bg-cream sm:hidden safe-top"
         role="dialog"
         aria-modal="true"
       >
-        <div class="safe-top flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-          <RouterLink
-            to="/"
-            class="flex items-center gap-2"
-          >
-            <img
-              :src="logo"
-              alt="Anota Canaston"
-              class="h-8 w-8"
-            >
-            <span class="text-lg font-semibold">Anota Canaston</span>
-          </RouterLink>
+        <!-- Close button — floating top-right -->
+        <div class="flex justify-end px-5 pt-3">
           <button
             type="button"
-            class="flex h-11 w-11 items-center justify-center rounded-lg text-neutral-700 hover:bg-neutral-100"
+            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-linen text-clay transition-all hover:bg-rose/30 hover:text-walnut active:scale-90"
             :aria-label="t('shell.closeMenu')"
             @click="menuOpen = false"
           >
@@ -139,40 +129,118 @@ watch(menuOpen, (open) => {
           </button>
         </div>
 
-        <nav class="flex flex-1 flex-col gap-1 p-4 text-lg font-medium">
+        <!-- Centered brand -->
+        <div class="flex flex-col items-center gap-2 px-5 pt-4 pb-6">
+          <img
+            :src="logo"
+            alt="Anota Canaston"
+            class="nav-stagger-1 h-16 w-16"
+          >
+          <span class="nav-stagger-1 font-display text-xl text-walnut">Anota Canaston</span>
+        </div>
+
+        <!-- Nav links — large, card-like items with staggered entrance -->
+        <nav class="flex flex-1 flex-col gap-2 px-5">
           <RouterLink
             to="/"
-            class="rounded-lg px-4 py-3 hover:bg-neutral-100"
+            class="nav-stagger-2 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
-            {{ t('shell.navSessions') }}
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="h-5 w-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
+                />
+              </svg>
+            </span>
+            <span class="text-lg font-medium text-walnut">{{ t('shell.navSessions') }}</span>
           </RouterLink>
+
           <RouterLink
             to="/rules"
-            class="rounded-lg px-4 py-3 hover:bg-neutral-100"
+            class="nav-stagger-3 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
-            {{ t('shell.navRules') }}
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-light text-gold">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="h-5 w-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                />
+              </svg>
+            </span>
+            <span class="text-lg font-medium text-walnut">{{ t('shell.navRules') }}</span>
           </RouterLink>
+
           <RouterLink
             to="/about"
-            class="rounded-lg px-4 py-3 hover:bg-neutral-100"
+            class="nav-stagger-4 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
-            {{ t('shell.navAbout') }}
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sage-light text-sage">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="h-5 w-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                />
+              </svg>
+            </span>
+            <span class="text-lg font-medium text-walnut">{{ t('shell.navAbout') }}</span>
           </RouterLink>
+
           <RouterLink
             to="/welcome"
-            class="flex items-center justify-between rounded-lg px-4 py-3 hover:bg-neutral-100"
+            class="nav-stagger-5 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
-            {{ t('shell.navAccount') }}
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="h-5 w-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                />
+              </svg>
+            </span>
+            <span class="flex-1 text-lg font-medium text-walnut">{{ t('shell.navAccount') }}</span>
             <span
               v-if="account.mode === 'offline'"
-              class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800"
+              class="rounded-full bg-gold-light px-2.5 py-1 text-xs font-semibold text-gold"
             >
               {{ t('shell.offlineBadge') }}
             </span>
           </RouterLink>
         </nav>
 
-        <div class="safe-bottom border-t border-neutral-200 p-4">
+        <!-- Footer -->
+        <div class="safe-bottom flex items-center justify-between border-t border-rose/30 px-5 py-4">
+          <p class="text-xs text-clay">
+            Anota Canaston
+          </p>
           <LocaleSwitcher />
         </div>
       </div>

@@ -9,7 +9,7 @@ const { t } = useI18n()
 <template>
   <RouterLink
     :to="to"
-    class="mb-2 -ml-2 flex h-11 w-11 items-center justify-center rounded-lg text-neutral-700 hover:bg-neutral-100"
+    class="mb-2 -ml-2 flex h-11 w-11 items-center justify-center rounded-xl text-clay transition-colors hover:bg-linen hover:text-walnut"
     :aria-label="t('common.back')"
   >
     <ChevronLeftIcon class="h-6 w-6" />

@@ -1,13 +1,30 @@
 @import "tailwindcss";
 @import "./transitions.css";
 @import "@fontsource/fondamento";
+@import "@fontsource-variable/dm-sans";
 
 @theme {
-  --font-sans: 'Fondamento', cursive;
+  --font-sans: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Fondamento', cursive;
+
+  --color-cream: #FDF8F0;
+  --color-linen: #F5EDE3;
+  --color-walnut: #4A3728;
+  --color-clay: #7C5E4A;
+  --color-sage: #5B7A5E;
+  --color-sage-light: #EDF5EE;
+  --color-wine: #8B3A4A;
+  --color-wine-light: #F9EEF0;
+  --color-gold: #B8860B;
+  --color-gold-light: #FDF6E3;
+  --color-rose: #E8C4C4;
+  --color-ivory: #FFFEF9;
 }
 
 body {
-  font-family: 'Fondamento', cursive;
+  font-family: var(--font-sans);
+  background-color: var(--color-cream);
+  color: var(--color-walnut);
 }
 
 /* Safe-area utilities so the same markup is correct in the browser and
