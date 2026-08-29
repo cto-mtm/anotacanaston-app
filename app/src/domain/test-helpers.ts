@@ -1,4 +1,4 @@
-import type { CanastaType, TeamRoundEntry } from './types'
+import type { CanastaType, Round, TeamRoundEntry } from './types'
 
 const EMPTY_CANASTAS: Record<CanastaType, number> = {
   clean: 0,
@@ -6,12 +6,13 @@ const EMPTY_CANASTAS: Record<CanastaType, number> = {
   cleanAce: 0,
   dirtyAce: 0,
   cleanDeuce: 0,
+  dirtyDeuce: 0,
   joker: 0,
   monkey: 0,
 }
 
 export function makeEntry(overrides: Partial<TeamRoundEntry> = {}): TeamRoundEntry {
-  const { canastas, ...rest } = overrides
+  const { canastas, canastasEnMano, ...rest } = overrides
   return {
     exactCut: false,
     misdeal: false,
@@ -22,5 +23,11 @@ export function makeEntry(overrides: Partial<TeamRoundEntry> = {}): TeamRoundEnt
     handPoints: {},
     ...rest,
     canastas: { ...EMPTY_CANASTAS, ...canastas },
+    canastasEnMano: { ...EMPTY_CANASTAS, ...canastasEnMano },
   }
+}
+
+/** Creates a Round with an empty C entry by default. */
+export function makeRound(entries: { A: TeamRoundEntry; B: TeamRoundEntry; C?: TeamRoundEntry }): Round {
+  return { entries: { A: entries.A, B: entries.B, C: entries.C ?? makeEntry() } }
 }

@@ -7,7 +7,7 @@ import { buildFourPlayerSchedule } from '../domain/rotation'
 import PlayerPicker from '../components/PlayerPicker.vue'
 import PartnershipPicker from '../components/PartnershipPicker.vue'
 import BaseButton from '../components/BaseButton.vue'
-import type { Player, PlayerId, TeamId } from '../domain/types'
+import type { Player, PlayerId, SixPlayerFormat, TeamId } from '../domain/types'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -15,6 +15,7 @@ const sessionsStore = useSessionsStore()
 
 const step = ref(1)
 const playerCount = ref<4 | 6>(4)
+const sixPlayerFormat = ref<SixPlayerFormat>('2x3')
 const date = ref(new Date().toISOString().slice(0, 10))
 const players = ref<Player[]>(
   Array.from({ length: 4 }, () => ({ id: crypto.randomUUID(), name: '' })),
@@ -51,7 +52,7 @@ const fourPlayerPreview = computed(() => {
       players.value.map((p) => p.id),
       manoId.value,
       dealerId.value,
-      { A: [manoId.value, partnerId.value], B: others },
+      { A: [manoId.value, partnerId.value], B: others, C: [] },
     )
   } catch {
     return null
@@ -68,19 +69,34 @@ interface SixPlayerGameDraft {
   dealerId: PlayerId | null
 }
 
-const sixPlayerGames = ref<SixPlayerGameDraft[]>([{ partnership: { A: [], B: [] }, dealerId: null }])
+function makeEmptyPartnership(): Record<TeamId, PlayerId[]> {
+  return { A: [], B: [], C: [] }
+}
+
+const sixPlayerGames = ref<SixPlayerGameDraft[]>([{ partnership: makeEmptyPartnership(), dealerId: null }])
+
+// Reset games when format changes
+watch(sixPlayerFormat, () => {
+  sixPlayerGames.value = [{ partnership: makeEmptyPartnership(), dealerId: null }]
+})
 
 function addGame() {
-  sixPlayerGames.value.push({ partnership: { A: [], B: [] }, dealerId: null })
+  sixPlayerGames.value.push({ partnership: makeEmptyPartnership(), dealerId: null })
 }
 function removeGame(index: number) {
   if (sixPlayerGames.value.length > 1) sixPlayerGames.value.splice(index, 1)
 }
 
+const sixPlayerTeamSize = computed(() => (sixPlayerFormat.value === '2x3' ? 3 : 2))
+const sixPlayerTeams = computed((): TeamId[] => (sixPlayerFormat.value === '2x3' ? ['A', 'B'] : ['A', 'B', 'C']))
+
 const sixPlayerGamesValid = computed(() =>
-  sixPlayerGames.value.every(
-    (g) => g.partnership.A.length === 3 && g.partnership.B.length === 3 && g.dealerId,
-  ),
+  sixPlayerGames.value.every((g) => {
+    const allAssigned = sixPlayerTeams.value.every(
+      (team) => g.partnership[team].length === sixPlayerTeamSize.value,
+    )
+    return allAssigned && g.dealerId
+  }),
 )
 
 // ── navigation ───────────────────────────────────────────────────
@@ -115,7 +131,7 @@ function create() {
       players: players.value,
       manoId: manoId.value,
       initialDealerId: dealerId.value,
-      initialPartnership: { A: [manoId.value, partnerId.value], B: others },
+      initialPartnership: { A: [manoId.value, partnerId.value], B: others, C: [] },
     })
     router.push(`/sessions/${session.id}`)
     return
@@ -125,6 +141,7 @@ function create() {
   const session = sessionsStore.createSession({
     date: date.value,
     playerCount: 6,
+    sixPlayerFormat: sixPlayerFormat.value,
     players: players.value,
     manoId: manoId.value,
     games: sixPlayerGames.value.map((g) => ({
@@ -179,6 +196,33 @@ function create() {
           </button>
         </div>
       </label>
+
+      <!-- 6-player format choice -->
+      <label
+        v-if="playerCount === 6"
+        class="mb-4 block text-sm text-walnut"
+      >
+        {{ t('newSession.sixPlayerFormatLabel') }}
+        <div class="mt-2 flex gap-2">
+          <button
+            type="button"
+            class="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+            :class="sixPlayerFormat === '2x3' ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
+            @click="sixPlayerFormat = '2x3'"
+          >
+            {{ t('game.sixPlayerFormat.2x3') }}
+          </button>
+          <button
+            type="button"
+            class="min-h-11 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
+            :class="sixPlayerFormat === '3x2' ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
+            @click="sixPlayerFormat = '3x2'"
+          >
+            {{ t('game.sixPlayerFormat.3x2') }}
+          </button>
+        </div>
+      </label>
+
       <label class="block text-sm text-walnut">
         {{ t('newSession.dateLabel') }}
         <input
@@ -316,8 +360,9 @@ function create() {
           </div>
           <PartnershipPicker
             :players="players"
-            :model-value="game.partnership"
-            :team-size="3"
+            v-model="game.partnership"
+            :team-size="sixPlayerTeamSize"
+            :teams="sixPlayerTeams"
           />
           <div class="mt-3">
             <p class="mb-1 text-xs text-clay">

@@ -4,11 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { scoreRound, validateRound, checkCardSupply } from '../domain/scoring'
+import { teamsForGame } from '../domain/constants'
 import { ALL_CANASTA_TYPES } from '../domain/constants'
 import TeamRoundForm from '../components/TeamRoundForm.vue'
 import ScorePreview from '../components/ScorePreview.vue'
 import BaseButton from '../components/BaseButton.vue'
-import type { CanastaType, PlayerId, TeamRoundEntry } from '../domain/types'
+import type { CanastaType, PlayerId, TeamId, TeamRoundEntry } from '../domain/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,20 +23,21 @@ const roundIndex = computed(() => Number(route.params.r))
 
 const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
+const teams = computed(() => (game.value ? teamsForGame(game.value.partnership) : (['A', 'B'] as TeamId[])))
 
-// Both team panels always render (needed for the score preview/validation
-// below), but on narrow screens only one is shown at a time via these tabs;
-// md: and up shows both side by side regardless of this.
-const activeTeam = ref<'A' | 'B'>('A')
+// Mobile tab: show one team at a time on narrow screens
+const activeTeam = ref<TeamId>('A')
 
 function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
   const canastas = Object.fromEntries(ALL_CANASTA_TYPES.map((c) => [c, 0])) as Record<CanastaType, number>
+  const canastasEnMano = Object.fromEntries(ALL_CANASTA_TYPES.map((c) => [c, 0])) as Record<CanastaType, number>
   const handPoints = Object.fromEntries(playerIds.map((id) => [id, 0]))
   return {
     exactCut: false,
     misdeal: false,
     honors: 0,
     canastas,
+    canastasEnMano,
     wentOut: false,
     blackThreesBonus: false,
     meldedPoints: 0,
@@ -52,41 +54,44 @@ function cloneEntry(entry: TeamRoundEntry): TeamRoundEntry {
 
 const existingRound = isEdit.value ? game.value?.rounds[roundIndex.value] : undefined
 
-const entriesA = ref<TeamRoundEntry>(
-  existingRound ? cloneEntry(existingRound.entries.A) : makeEmptyEntry(game.value?.partnership.A ?? []),
-)
-const entriesB = ref<TeamRoundEntry>(
-  existingRound ? cloneEntry(existingRound.entries.B) : makeEmptyEntry(game.value?.partnership.B ?? []),
-)
+const entries = ref<Record<TeamId, TeamRoundEntry>>({
+  A: existingRound ? cloneEntry(existingRound.entries.A) : makeEmptyEntry(game.value?.partnership.A ?? []),
+  B: existingRound ? cloneEntry(existingRound.entries.B) : makeEmptyEntry(game.value?.partnership.B ?? []),
+  C: existingRound ? cloneEntry(existingRound.entries.C) : makeEmptyEntry(game.value?.partnership.C ?? []),
+})
 
-const breakdownA = computed(() => scoreRound(entriesA.value))
-const breakdownB = computed(() => scoreRound(entriesB.value))
+const breakdowns = computed(() => {
+  const result: Partial<Record<TeamId, ReturnType<typeof scoreRound>>> = {}
+  for (const team of teams.value) result[team] = scoreRound(entries.value[team])
+  return result as Record<TeamId, ReturnType<typeof scoreRound>>
+})
 
 const validation = computed(() =>
-  validateRound({ entries: { A: entriesA.value, B: entriesB.value } }, session.value?.playerCount ?? 4),
+  validateRound({ entries: entries.value }, session.value?.playerCount ?? 4, teams.value),
 )
 
-// Non-blocking: unlike `validation`, these never stop the save — they're a
-// heads-up that a canasta combination looks off given the deck in play.
+// Non-blocking: heads-up that a canasta combination looks off given the deck in play.
 const cardSupplyWarnings = computed(() =>
-  checkCardSupply({ entries: { A: entriesA.value, B: entriesB.value } }, session.value?.playerCount ?? 4),
+  checkCardSupply({ entries: entries.value }, session.value?.playerCount ?? 4, teams.value),
 )
 
-function playersFor(team: 'A' | 'B') {
+function playersFor(team: TeamId) {
   const ids = game.value?.partnership[team] ?? []
   return ids.map((id) => session.value?.players.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p))
 }
 
 function noCanastasClosed(entry: TeamRoundEntry): boolean {
-  return Object.values(entry.canastas).every((count) => count === 0)
+  return (
+    Object.values(entry.canastas).every((count) => count === 0) &&
+    Object.values(entry.canastasEnMano).every((count) => count === 0)
+  )
 }
 
 function persist() {
-  const entries = { A: entriesA.value, B: entriesB.value }
   if (isEdit.value) {
-    sessionsStore.updateRound(sessionId.value, gameIndex.value, roundIndex.value, entries)
+    sessionsStore.updateRound(sessionId.value, gameIndex.value, roundIndex.value, entries.value)
   } else {
-    sessionsStore.addRound(sessionId.value, gameIndex.value, entries)
+    sessionsStore.addRound(sessionId.value, gameIndex.value, entries.value)
   }
   sessionsStore.advanceGame(sessionId.value)
   router.push(`/sessions/${sessionId.value}/games/${gameIndex.value}`)
@@ -94,6 +99,12 @@ function persist() {
 
 function save() {
   if (validation.value.valid) persist()
+}
+
+const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
+  A: { active: 'border-wine bg-wine text-white shadow-sm shadow-wine/20', inactive: 'border-rose/40 bg-linen text-walnut' },
+  B: { active: 'border-sage bg-sage text-white shadow-sm shadow-sage/20', inactive: 'border-rose/40 bg-linen text-walnut' },
+  C: { active: 'border-gold bg-gold text-white shadow-sm shadow-gold/20', inactive: 'border-rose/40 bg-linen text-walnut' },
 }
 </script>
 
@@ -103,61 +114,44 @@ function save() {
       {{ t(isEdit ? 'roundEntry.editTitle' : 'roundEntry.title') }}
     </h1>
 
-    <!-- Team tabs: mobile only, both panels always show on md: and up -->
+    <!-- Team tabs: mobile only -->
     <div class="mb-4 flex gap-2 md:hidden">
       <button
+        v-for="team in teams"
+        :key="team"
         type="button"
         class="flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
-        :class="activeTeam === 'A' ? 'border-wine bg-wine text-white shadow-sm shadow-wine/20' : 'border-rose/40 bg-linen text-walnut'"
-        @click="activeTeam = 'A'"
+        :class="activeTeam === team ? teamTabColors[team].active : teamTabColors[team].inactive"
+        @click="activeTeam = team"
       >
-        {{ t('game.team.A') }}
-      </button>
-      <button
-        type="button"
-        class="flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
-        :class="activeTeam === 'B' ? 'border-sage bg-sage text-white shadow-sm shadow-sage/20' : 'border-rose/40 bg-linen text-walnut'"
-        @click="activeTeam = 'B'"
-      >
-        {{ t('game.team.B') }}
+        {{ t(`game.team.${team}`) }}
       </button>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div :class="{ hidden: activeTeam !== 'A', 'md:block': true }">
+    <div
+      class="grid grid-cols-1 gap-4"
+      :class="teams.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'"
+    >
+      <div
+        v-for="team in teams"
+        :key="team"
+        :class="{ hidden: activeTeam !== team, 'md:block': true }"
+      >
         <TeamRoundForm
-          v-model="entriesA"
-          :players="playersFor('A')"
-          :team-label="t('game.team.A')"
+          v-model="entries[team]"
+          :players="playersFor(team)"
+          :team-label="t(`game.team.${team}`)"
         />
         <p
-          v-if="noCanastasClosed(entriesA)"
+          v-if="noCanastasClosed(entries[team])"
           class="mt-2 text-sm text-gold"
         >
           {{ t('roundEntry.noCanastasWarning') }}
         </p>
         <ScorePreview
           class="mt-3"
-          :breakdown="breakdownA"
-          :team-label="t('game.team.A')"
-        />
-      </div>
-      <div :class="{ hidden: activeTeam !== 'B', 'md:block': true }">
-        <TeamRoundForm
-          v-model="entriesB"
-          :players="playersFor('B')"
-          :team-label="t('game.team.B')"
-        />
-        <p
-          v-if="noCanastasClosed(entriesB)"
-          class="mt-2 text-sm text-gold"
-        >
-          {{ t('roundEntry.noCanastasWarning') }}
-        </p>
-        <ScorePreview
-          class="mt-3"
-          :breakdown="breakdownB"
-          :team-label="t('game.team.B')"
+          :breakdown="breakdowns[team]"
+          :team-label="t(`game.team.${team}`)"
         />
       </div>
     </div>

@@ -8,6 +8,7 @@ export const canastaTypeSchema = z.enum([
   'cleanAce',
   'dirtyAce',
   'cleanDeuce',
+  'dirtyDeuce',
   'joker',
   'monkey',
 ])
@@ -18,6 +19,7 @@ export const canastasSchema = z.object({
   cleanAce: z.number().int().min(0),
   dirtyAce: z.number().int().min(0),
   cleanDeuce: z.number().int().min(0),
+  dirtyDeuce: z.number().int().min(0),
   joker: z.number().int().min(0),
   monkey: z.number().int().min(0),
 })
@@ -27,6 +29,16 @@ export const teamRoundEntrySchema = z.object({
   misdeal: z.boolean(),
   honors: z.number().int().min(0),
   canastas: canastasSchema,
+  canastasEnMano: canastasSchema.default({
+    clean: 0,
+    dirty: 0,
+    cleanAce: 0,
+    dirtyAce: 0,
+    cleanDeuce: 0,
+    dirtyDeuce: 0,
+    joker: 0,
+    monkey: 0,
+  }),
   wentOut: z.boolean(),
   blackThreesBonus: z.boolean(),
   meldedPoints: z.number().int().min(0),
@@ -37,6 +49,7 @@ export const roundSchema = z.object({
   entries: z.object({
     A: teamRoundEntrySchema,
     B: teamRoundEntrySchema,
+    C: teamRoundEntrySchema,
   }),
 })
 
@@ -44,6 +57,7 @@ export const gameSchema = z.object({
   partnership: z.object({
     A: z.array(playerIdSchema),
     B: z.array(playerIdSchema),
+    C: z.array(playerIdSchema),
   }),
   dealerId: playerIdSchema,
   manoId: playerIdSchema,
@@ -59,6 +73,7 @@ export const sessionSchema = z.object({
   id: z.string().min(1),
   date: z.string().min(1),
   playerCount: z.union([z.literal(4), z.literal(6)]),
+  sixPlayerFormat: z.enum(['2x3', '3x2']).optional(),
   players: z.array(playerSchema),
   manoId: playerIdSchema,
   initialDealerId: playerIdSchema,

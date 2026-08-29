@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n'
 
 defineProps<{
-  team: 'A' | 'B'
+  team: 'A' | 'B' | 'C'
   threshold: { points: number; cleanOnly: boolean }
 }>()
 const { t } = useI18n()

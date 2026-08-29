@@ -9,9 +9,9 @@ const tailscalePort = process.env.TAILSCALE_PORT
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
-  // Capacitor loads the app from capacitor://localhost — relative asset
-  // paths are required or the native build 404s on every chunk.
-  base: './',
+  // Capacitor loads from capacitor://localhost and needs relative paths;
+  // web hosting needs absolute paths so SPA deep-links resolve assets correctly.
+  base: process.env.CAPACITOR_BUILD ? './' : '/',
   build: { outDir: 'dist' },
   server: {
     host: '0.0.0.0',

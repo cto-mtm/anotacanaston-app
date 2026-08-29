@@ -19,13 +19,12 @@ import {
   MISDEAL_PENALTY,
   SUPER_CANASTON_BONUS,
   SUPER_CANASTON_THRESHOLD,
+  teamsForGame,
   totalAces,
   totalDeuces,
   totalJokers,
 } from './constants'
-import type { Game, PlayerCount, PlayerId, Round, Session, TeamId, TeamRoundEntry } from './types'
-
-const TEAM_IDS: readonly TeamId[] = ['A', 'B']
+import type { CanastaType, Game, PlayerCount, PlayerId, Round, Session, TeamId, TeamRoundEntry } from './types'
 
 export type RoundViolationCode =
   | 'invalidIda'
@@ -55,15 +54,15 @@ export interface RoundScoreBreakdown {
 }
 
 function hasClean(entry: TeamRoundEntry): boolean {
-  return CLEAN_CANASTA_TYPES.some((t) => entry.canastas[t] > 0)
+  return CLEAN_CANASTA_TYPES.some((t) => entry.canastas[t] > 0 || entry.canastasEnMano[t] > 0)
 }
 
 function hasDirty(entry: TeamRoundEntry): boolean {
-  return DIRTY_CANASTA_TYPES.some((t) => entry.canastas[t] > 0)
+  return DIRTY_CANASTA_TYPES.some((t) => entry.canastas[t] > 0 || entry.canastasEnMano[t] > 0)
 }
 
 function totalCanastas(entry: TeamRoundEntry): number {
-  return ALL_CANASTA_TYPES.reduce((sum, t) => sum + entry.canastas[t], 0)
+  return ALL_CANASTA_TYPES.reduce((sum, t) => sum + entry.canastas[t] + entry.canastasEnMano[t], 0)
 }
 
 export type HonorsClosedKind = 'both' | 'cleanOnly' | 'other'
@@ -107,7 +106,7 @@ export function scoreRound(entry: TeamRoundEntry): RoundScoreBreakdown {
   const misdeal = entry.misdeal ? MISDEAL_PENALTY : 0
   const honors = honorsValue(entry.honors, entry)
   const canastas = ALL_CANASTA_TYPES.reduce(
-    (sum, t) => sum + entry.canastas[t] * CANASTA_VALUES[t],
+    (sum, t) => sum + entry.canastas[t] * CANASTA_VALUES[t] + entry.canastasEnMano[t] * CANASTA_VALUES[t] * 2,
     0,
   )
   const bonus = countBonus(total)
@@ -148,27 +147,27 @@ export interface RoundValidation {
  * Cross-team checks: combines each team's scoreRound violations with the
  * round-level checks that require comparing both entries at once.
  */
-export function validateRound(round: Round, playerCount: PlayerCount): RoundValidation {
+export function validateRound(round: Round, playerCount: PlayerCount, teams: TeamId[] = ['A', 'B']): RoundValidation {
   const violations: RoundViolation[] = []
   const maxHonors = MAX_HONORS[playerCount]
 
-  for (const team of TEAM_IDS) {
+  for (const team of teams) {
     const entry = round.entries[team]
     const breakdown = scoreRound(entry)
     for (const v of breakdown.violations) violations.push({ ...v, team })
     if (entry.honors > maxHonors) violations.push({ team, code: 'honorsOverMax' })
   }
 
-  const honorsSum = round.entries.A.honors + round.entries.B.honors
+  const honorsSum = teams.reduce((sum, t) => sum + round.entries[t].honors, 0)
   if (honorsSum > maxHonors) violations.push({ code: 'honorsSumOverMax' })
 
-  const wentOutCount = TEAM_IDS.filter((t) => round.entries[t].wentOut).length
+  const wentOutCount = teams.filter((t) => round.entries[t].wentOut).length
   if (wentOutCount > 1) violations.push({ code: 'multipleWentOut' })
 
-  const exactCutCount = TEAM_IDS.filter((t) => round.entries[t].exactCut).length
+  const exactCutCount = teams.filter((t) => round.entries[t].exactCut).length
   if (exactCutCount > 1) violations.push({ code: 'multipleExactCut' })
 
-  const misdealCount = TEAM_IDS.filter((t) => round.entries[t].misdeal).length
+  const misdealCount = teams.filter((t) => round.entries[t].misdeal).length
   if (misdealCount > 1) violations.push({ code: 'multipleMisdeal' })
 
   return { valid: violations.length === 0, violations }
@@ -188,34 +187,33 @@ export interface CardSupplyWarning {
 /**
  * Non-blocking sanity check: is this combination of rank-locked canastas
  * (aces, deuces, jokers) even possible given how many decks are actually in
- * play (3 for 4 players, 4 for 6 players)? Uses the most charitable
- * assumption for each canasta (max wildcards where allowed) — if even that
- * best case exceeds the deck's supply, it's flagged. This can't check the
- * generic clean/dirty canasta types (4-K): those aren't tied to one rank in
- * the data model, so no fixed supply ceiling applies to them.
+ * play (3 for 4 players, 4 for 6 players)?
  */
-export function checkCardSupply(round: Round, playerCount: PlayerCount): CardSupplyWarning[] {
+export function checkCardSupply(round: Round, playerCount: PlayerCount, teams: TeamId[] = ['A', 'B']): CardSupplyWarning[] {
   const warnings: CardSupplyWarning[] = []
-  const a = round.entries.A.canastas
-  const b = round.entries.B.canastas
 
-  const cleanAceTotal = a.cleanAce + b.cleanAce
-  const dirtyAceTotal = a.dirtyAce + b.dirtyAce
+  const count = (team: TeamId, type: CanastaType) =>
+    round.entries[team].canastas[type] + round.entries[team].canastasEnMano[type]
+
+  const cleanAceTotal = teams.reduce((sum, t) => sum + count(t, 'cleanAce'), 0)
+  const dirtyAceTotal = teams.reduce((sum, t) => sum + count(t, 'dirtyAce'), 0)
   const minAcesNeeded =
     cleanAceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + dirtyAceTotal * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA
   if (minAcesNeeded > totalAces(playerCount)) warnings.push({ code: 'aceSupplyExceeded' })
 
-  for (const team of TEAM_IDS) {
-    const canastas = round.entries[team].canastas
-    if (canastas.cleanAce > 0 && canastas.dirtyAce > 0) {
+  for (const team of teams) {
+    if (count(team, 'cleanAce') > 0 && count(team, 'dirtyAce') > 0) {
       warnings.push({ team, code: 'bothAceVariantsSameTeam' })
     }
   }
 
-  const jokerCanastaTotal = a.joker + b.joker
-  const cleanDeuceTotal = a.cleanDeuce + b.cleanDeuce
+  const jokerCanastaTotal = teams.reduce((sum, t) => sum + count(t, 'joker'), 0)
+  const cleanDeuceTotal = teams.reduce((sum, t) => sum + count(t, 'cleanDeuce'), 0)
+  const dirtyDeuceTotal = teams.reduce((sum, t) => sum + count(t, 'dirtyDeuce'), 0)
   const minDeucesNeeded =
-    cleanDeuceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + jokerCanastaTotal * JOKER_CANASTA_DEUCE_COUNT
+    cleanDeuceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA +
+    dirtyDeuceTotal * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA +
+    jokerCanastaTotal * JOKER_CANASTA_DEUCE_COUNT
   if (minDeucesNeeded > totalDeuces(playerCount)) warnings.push({ code: 'deuceSupplyExceeded' })
 
   const minJokersNeeded = jokerCanastaTotal * JOKER_CANASTA_JOKER_COUNT
@@ -225,9 +223,10 @@ export function checkCardSupply(round: Round, playerCount: PlayerCount): CardSup
 }
 
 export function gameTotals(game: Game): Record<TeamId, number> {
-  const totals: Record<TeamId, number> = { A: 0, B: 0 }
+  const teams = teamsForGame(game.partnership)
+  const totals: Record<TeamId, number> = { A: 0, B: 0, C: 0 }
   for (const round of game.rounds) {
-    for (const team of TEAM_IDS) {
+    for (const team of teams) {
       totals[team] += scoreRound(round.entries[team]).total
     }
   }
@@ -240,17 +239,18 @@ export interface GameResult {
 }
 
 export function gameResult(game: Game): GameResult {
+  const teams = teamsForGame(game.partnership)
   const totals = gameTotals(game)
-  const aAbove = totals.A >= GAME_TARGET
-  const bAbove = totals.B >= GAME_TARGET
 
-  if (aAbove && bAbove) {
-    if (totals.A === totals.B) return { finished: false }
-    return { finished: true, winner: totals.A > totals.B ? 'A' : 'B' }
-  }
-  if (aAbove) return { finished: true, winner: 'A' }
-  if (bAbove) return { finished: true, winner: 'B' }
-  return { finished: false }
+  const aboveTarget = teams.filter((t) => totals[t] >= GAME_TARGET)
+
+  if (aboveTarget.length === 0) return { finished: false }
+
+  // If multiple teams above target, highest wins; if tied, not finished yet
+  const maxScore = Math.max(...aboveTarget.map((t) => totals[t]))
+  const leaders = aboveTarget.filter((t) => totals[t] === maxScore)
+  if (leaders.length > 1) return { finished: false }
+  return { finished: true, winner: leaders[0] }
 }
 
 export function meldThreshold(cumulative: number): { points: number; cleanOnly: boolean } {
@@ -267,8 +267,9 @@ export function sessionTallies(session: Session): Record<PlayerId, number> {
   for (const player of session.players) tallies[player.id] = 0
 
   for (const game of session.games) {
+    const teams = teamsForGame(game.partnership)
     const totals = gameTotals(game)
-    for (const team of TEAM_IDS) {
+    for (const team of teams) {
       for (const playerId of game.partnership[team]) {
         tallies[playerId] = (tallies[playerId] ?? 0) + totals[team]
       }

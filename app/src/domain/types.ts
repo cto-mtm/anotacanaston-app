@@ -1,6 +1,7 @@
 export type PlayerId = string
-export type TeamId = 'A' | 'B'
+export type TeamId = 'A' | 'B' | 'C'
 export type PlayerCount = 4 | 6
+export type SixPlayerFormat = '2x3' | '3x2'
 export type SessionStatus = 'in_progress' | 'finished'
 
 export type CanastaType =
@@ -9,6 +10,7 @@ export type CanastaType =
   | 'cleanAce'
   | 'dirtyAce'
   | 'cleanDeuce'
+  | 'dirtyDeuce'
   | 'joker'
   | 'monkey'
 
@@ -22,6 +24,10 @@ export interface TeamRoundEntry {
   misdeal: boolean
   honors: number
   canastas: Record<CanastaType, number>
+  /** "En mano" canastas — melded straight from hand, worth 2x the base value.
+   * Same types as `canastas`; counts here score double but otherwise behave
+   * identically (la ida, honors bracket, canastón count). */
+  canastasEnMano: Record<CanastaType, number>
   wentOut: boolean
   blackThreesBonus: boolean
   meldedPoints: number
@@ -43,6 +49,7 @@ export interface Session {
   id: string
   date: string
   playerCount: PlayerCount
+  sixPlayerFormat?: SixPlayerFormat
   /** Clockwise seat order. */
   players: Player[]
   manoId: PlayerId

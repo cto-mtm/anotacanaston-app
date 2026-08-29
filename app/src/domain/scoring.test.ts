@@ -10,8 +10,8 @@ import {
   sessionWinner,
 } from './scoring'
 import { CANASTA_VALUES } from './constants'
-import { makeEntry } from './test-helpers'
-import type { CanastaType, Game, Round, Session } from './types'
+import { makeEntry, makeRound } from './test-helpers'
+import type { CanastaType, Game, Session } from './types'
 
 describe('scoreRound — honors matrix', () => {
   it('both clean and dirty closed: 1-3 honors = 100 each', () => {
@@ -74,6 +74,7 @@ describe('scoreRound — canasta values', () => {
         cleanAce: 1,
         dirtyAce: 1,
         cleanDeuce: 1,
+        dirtyDeuce: 1,
         joker: 1,
         monkey: 1,
       },
@@ -84,9 +85,42 @@ describe('scoreRound — canasta values', () => {
       1 * CANASTA_VALUES.cleanAce +
       1 * CANASTA_VALUES.dirtyAce +
       1 * CANASTA_VALUES.cleanDeuce +
+      1 * CANASTA_VALUES.dirtyDeuce +
       1 * CANASTA_VALUES.joker +
       1 * CANASTA_VALUES.monkey
     expect(scoreRound(entry).canastas).toBe(expected)
+  })
+
+  it('scores en-mano canastas at 2x the base value', () => {
+    const entry = makeEntry({ canastasEnMano: { clean: 1 } as Record<CanastaType, number> })
+    expect(scoreRound(entry).canastas).toBe(2 * CANASTA_VALUES.clean)
+  })
+
+  it('adds base and en-mano of the same type (n + 2n)', () => {
+    const entry = makeEntry({
+      canastas: { clean: 1 } as Record<CanastaType, number>,
+      canastasEnMano: { clean: 1 } as Record<CanastaType, number>,
+    })
+    expect(scoreRound(entry).canastas).toBe(CANASTA_VALUES.clean + 2 * CANASTA_VALUES.clean)
+  })
+
+  it('counts en-mano canastas toward la ida clean/dirty requirement', () => {
+    const entry = makeEntry({
+      wentOut: true,
+      canastasEnMano: { clean: 1, dirty: 1 } as Record<CanastaType, number>,
+    })
+    const result = scoreRound(entry)
+    expect(result.goingOut).toBe(300)
+    expect(result.violations).toEqual([])
+  })
+
+  it('counts en-mano canastas toward the canastón bonus', () => {
+    const entry = makeEntry({
+      canastas: { clean: 5 } as Record<CanastaType, number>,
+      canastasEnMano: { clean: 4 } as Record<CanastaType, number>,
+    })
+    // 5 + 4 = 9 canastas -> Canastón bonus
+    expect(scoreRound(entry).countBonus).toBe(3_000)
   })
 })
 
@@ -206,120 +240,96 @@ describe('validateRound — cross-team checks', () => {
   const playerCount = 4
 
   it('flags honors sum over the max for the player count', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ honors: 4, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ honors: 3, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ honors: 4, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ honors: 3, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+    })
     const result = validateRound(round, playerCount)
     expect(result.valid).toBe(false)
     expect(result.violations).toContainEqual({ code: 'honorsSumOverMax' })
   })
 
   it('flags a single team going over the max honors on its own', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ honors: 7 }),
-        B: makeEntry({ honors: 0 }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ honors: 7 }),
+      B: makeEntry({ honors: 0 }),
+    })
     const result = validateRound(round, playerCount)
     expect(result.violations).toContainEqual({ team: 'A', code: 'honorsOverMax' })
   })
 
   it('flags both teams going out in the same round', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ wentOut: true, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ wentOut: true, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ wentOut: true, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ wentOut: true, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+    })
     const result = validateRound(round, playerCount)
     expect(result.valid).toBe(false)
     expect(result.violations).toContainEqual({ code: 'multipleWentOut' })
   })
 
   it('flags both teams claiming exact cut', () => {
-    const round: Round = {
-      entries: { A: makeEntry({ exactCut: true }), B: makeEntry({ exactCut: true }) },
-    }
+    const round = makeRound({ A: makeEntry({ exactCut: true }), B: makeEntry({ exactCut: true }) })
     expect(validateRound(round, playerCount).violations).toContainEqual({ code: 'multipleExactCut' })
   })
 
   it('flags both teams claiming a misdeal', () => {
-    const round: Round = {
-      entries: { A: makeEntry({ misdeal: true }), B: makeEntry({ misdeal: true }) },
-    }
+    const round = makeRound({ A: makeEntry({ misdeal: true }), B: makeEntry({ misdeal: true }) })
     expect(validateRound(round, playerCount).violations).toContainEqual({ code: 'multipleMisdeal' })
   })
 
   it('is valid for an ordinary, well-formed round', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ exactCut: true, honors: 2, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ honors: 1 }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ exactCut: true, honors: 2, canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ honors: 1 }),
+    })
     expect(validateRound(round, playerCount).valid).toBe(true)
   })
 })
 
 describe('checkCardSupply', () => {
   it('is silent for an ordinary round with no rank-locked canastas', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
-        B: makeEntry(),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+      B: makeEntry(),
+    })
     expect(checkCardSupply(round, 4)).toEqual([])
   })
 
   it('is silent for a single clean ace canasta (7 of 12 aces, 4p)', () => {
-    const round: Round = {
-      entries: { A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }), B: makeEntry() },
-    }
+    const round = makeRound({ A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }), B: makeEntry() })
     expect(checkCardSupply(round, 4)).toEqual([])
   })
 
   it('flags two clean ace canastas across teams in a 4p game (14 > 12 aces)', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+    })
     expect(checkCardSupply(round, 4)).toContainEqual({ code: 'aceSupplyExceeded' })
   })
 
   it('does not flag the same two clean ace canastas in a 6p game (14 <= 16 aces)', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+    })
     expect(checkCardSupply(round, 6)).toEqual([])
   })
 
   it('flags three clean ace canastas in a 6p game (21 > 16 aces)', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanAce: 2 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanAce: 2 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { cleanAce: 1 } as Record<CanastaType, number> }),
+    })
     expect(checkCardSupply(round, 6)).toContainEqual({ code: 'aceSupplyExceeded' })
   })
 
   it('flags a team with both a clean and a dirty ace canasta, independent of supply', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanAce: 1, dirtyAce: 1 } as Record<CanastaType, number> }),
-        B: makeEntry(),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanAce: 1, dirtyAce: 1 } as Record<CanastaType, number> }),
+      B: makeEntry(),
+    })
     const warnings = checkCardSupply(round, 4)
     expect(warnings).toContainEqual({ team: 'A', code: 'bothAceVariantsSameTeam' })
     // Exactly 12 aces needed (7 clean + 5 dirty) against 12 available: not a supply violation on its own.
@@ -327,47 +337,39 @@ describe('checkCardSupply', () => {
   })
 
   it('flags two clean deuce canastas across teams in a 4p game (14 > 12 deuces)', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }),
+    })
     expect(checkCardSupply(round, 4)).toContainEqual({ code: 'deuceSupplyExceeded' })
   })
 
   it('counts each joker canasta as also consuming one deuce', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { cleanDeuce: 1, joker: 1 } as Record<CanastaType, number> }), // 7 + 1 = 8 deuces
-        B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }), // 7 deuces
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanDeuce: 1, joker: 1 } as Record<CanastaType, number> }), // 7 + 1 = 8 deuces
+      B: makeEntry({ canastas: { cleanDeuce: 1 } as Record<CanastaType, number> }), // 7 deuces
+    })
     // 15 deuces needed > 12 available in a 4p game.
     expect(checkCardSupply(round, 4)).toContainEqual({ code: 'deuceSupplyExceeded' })
   })
 
   it('is silent for a single joker canasta (6 of 6 jokers, 4p — exactly enough)', () => {
-    const round: Round = {
-      entries: { A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }), B: makeEntry() },
-    }
+    const round = makeRound({ A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }), B: makeEntry() })
     expect(checkCardSupply(round, 4)).toEqual([])
   })
 
   it('flags two joker canastas even in a 6p game (12 > 8 jokers)', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
+    })
     expect(checkCardSupply(round, 6)).toContainEqual({ code: 'jokerSupplyExceeded' })
   })
 })
 
-function makeGame(rounds: Round[]): Game {
+function makeGame(rounds: ReturnType<typeof makeRound>[]): Game {
   return {
-    partnership: { A: ['p1', 'p2'], B: ['p3', 'p4'] },
+    partnership: { A: ['p1', 'p2'], B: ['p3', 'p4'], C: [] },
     dealerId: 'p2',
     manoId: 'p1',
     rounds,
@@ -376,49 +378,42 @@ function makeGame(rounds: Round[]): Game {
 
 describe('gameTotals / gameResult', () => {
   it('sums round totals per team', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }), // 500
-        B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }), // 300
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }), // 500
+      B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }), // 300
+    })
     const totals = gameTotals(makeGame([round, round]))
-    expect(totals).toEqual({ A: 1_000, B: 600 })
+    expect(totals.A).toBe(1_000)
+    expect(totals.B).toBe(600)
   })
 
   it('declares a winner once one team crosses the game target', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
-        B: makeEntry(),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
+      B: makeEntry(),
+    })
     const result = gameResult(makeGame([round]))
     expect(result).toEqual({ finished: true, winner: 'A' })
   })
 
   it('is not finished when neither team has reached the target', () => {
-    const round: Round = { entries: { A: makeEntry({ meldedPoints: 100, canastas: { clean: 1 } as Record<CanastaType, number> }), B: makeEntry() } }
+    const round = makeRound({ A: makeEntry({ meldedPoints: 100, canastas: { clean: 1 } as Record<CanastaType, number> }), B: makeEntry() })
     expect(gameResult(makeGame([round])).finished).toBe(false)
   })
 
   it('plays another round when both teams tie above the target', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
+    })
     expect(gameResult(makeGame([round]))).toEqual({ finished: false })
   })
 
   it('picks the higher score when both cross but are not tied', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ meldedPoints: 15_500, canastas: { clean: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ meldedPoints: 15_500, canastas: { clean: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ meldedPoints: 15_000, canastas: { clean: 1 } as Record<CanastaType, number> }),
+    })
     expect(gameResult(makeGame([round]))).toEqual({ finished: true, winner: 'A' })
   })
 })
@@ -444,34 +439,28 @@ describe('sessionTallies / sessionWinner', () => {
   }
 
   it('attributes each game team total to its member players', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }), // 500
-        B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }), // 300
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }), // 500
+      B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }), // 300
+    })
     const session = makeSession([makeGame([round])])
     expect(sessionTallies(session)).toEqual({ p1: 500, p2: 500, p3: 300, p4: 300 })
   })
 
   it('returns every tied player as the session winner', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { clean: 1 } as Record<CanastaType, number> }),
+    })
     const session = makeSession([makeGame([round])])
     expect(sessionWinner(session).sort()).toEqual(['p1', 'p2', 'p3', 'p4'].sort())
   })
 
   it('returns a single winner when tallies differ', () => {
-    const round: Round = {
-      entries: {
-        A: makeEntry({ canastas: { clean: 2 } as Record<CanastaType, number> }),
-        B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }),
-      },
-    }
+    const round = makeRound({
+      A: makeEntry({ canastas: { clean: 2 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { dirty: 1 } as Record<CanastaType, number> }),
+    })
     const session = makeSession([makeGame([round])])
     expect(sessionWinner(session).sort()).toEqual(['p1', 'p2'].sort())
   })

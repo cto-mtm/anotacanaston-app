@@ -22,12 +22,12 @@ export function buildFourPlayerSchedule(
   }
 
   const game1: GameSkeleton = {
-    partnership: { A: [manoId, partnerId], B: [opp1, opp2] },
+    partnership: { A: [manoId, partnerId], B: [opp1, opp2], C: [] },
     dealerId,
     manoId,
   }
   const game2: GameSkeleton = {
-    partnership: { A: [manoId, opp1], B: [partnerId, opp2] },
+    partnership: { A: [manoId, opp1], B: [partnerId, opp2], C: [] },
     dealerId,
     manoId,
   }
@@ -39,7 +39,7 @@ export function buildFourPlayerSchedule(
   const game3Dealer = players[nextIndex]
 
   const game3: GameSkeleton = {
-    partnership: { A: [manoId, opp2], B: [partnerId, opp1] },
+    partnership: { A: [manoId, opp2], B: [partnerId, opp1], C: [] },
     dealerId: game3Dealer,
     manoId,
   }
@@ -51,17 +51,47 @@ export function buildFourPlayerSchedule(
  * 6-player partnerships (2 teams of 3) are assigned manually per game in
  * the wizard — there is no computed rotation. This just validates shape.
  */
-export function buildSixPlayerGames(
+export function buildSixPlayerGames2x3(
   games: Array<{ partnership: Record<TeamId, PlayerId[]>; dealerId: PlayerId; manoId: PlayerId }>,
 ): GameSkeleton[] {
   for (const game of games) {
     const all = [...game.partnership.A, ...game.partnership.B]
     if (game.partnership.A.length !== 3 || game.partnership.B.length !== 3) {
-      throw new Error('6-player games require exactly 3 players per team')
+      throw new Error('6-player 2x3 games require exactly 3 players per team')
     }
     if (new Set(all).size !== 6) {
-      throw new Error('6-player games require 6 distinct players')
+      throw new Error('6-player 2x3 games require 6 distinct players')
+    }
+  }
+  return games.map(({ partnership, dealerId, manoId }) => ({
+    partnership: { ...partnership, C: [] },
+    dealerId,
+    manoId,
+  }))
+}
+
+/**
+ * 6-player partnerships (3 teams of 2) are assigned manually per game in
+ * the wizard — there is no computed rotation. This just validates shape.
+ */
+export function buildSixPlayerGames3x2(
+  games: Array<{ partnership: Record<TeamId, PlayerId[]>; dealerId: PlayerId; manoId: PlayerId }>,
+): GameSkeleton[] {
+  for (const game of games) {
+    const all = [...game.partnership.A, ...game.partnership.B, ...game.partnership.C]
+    if (game.partnership.A.length !== 2 || game.partnership.B.length !== 2 || game.partnership.C.length !== 2) {
+      throw new Error('6-player 3x2 games require exactly 2 players per team')
+    }
+    if (new Set(all).size !== 6) {
+      throw new Error('6-player 3x2 games require 6 distinct players')
     }
   }
   return games.map(({ partnership, dealerId, manoId }) => ({ partnership, dealerId, manoId }))
+}
+
+/** Legacy alias for backward compat — delegates to 2x3. */
+export function buildSixPlayerGames(
+  games: Array<{ partnership: Record<TeamId, PlayerId[]>; dealerId: PlayerId; manoId: PlayerId }>,
+): GameSkeleton[] {
+  return buildSixPlayerGames2x3(games)
 }

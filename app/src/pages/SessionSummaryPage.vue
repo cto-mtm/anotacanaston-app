@@ -71,6 +71,12 @@ const sortedTallies = computed(() =>
             <th class="px-4 py-2.5">
               {{ t('game.team.B') }}
             </th>
+            <th
+              v-if="session.sixPlayerFormat === '3x2'"
+              class="px-4 py-2.5"
+            >
+              {{ t('game.team.C') }}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -87,6 +93,12 @@ const sortedTallies = computed(() =>
             </td>
             <td class="px-4 py-2.5 tabular-nums text-walnut">
               {{ sessionsStore.getGameTotals(session.id, i).B }}
+            </td>
+            <td
+              v-if="session.sixPlayerFormat === '3x2'"
+              class="px-4 py-2.5 tabular-nums text-walnut"
+            >
+              {{ sessionsStore.getGameTotals(session.id, i).C }}
             </td>
           </tr>
         </tbody>

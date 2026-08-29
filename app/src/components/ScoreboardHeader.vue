@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { teamsForGame } from '../domain/constants'
 import type { Game, Player, TeamId } from '../domain/types'
 
 const props = defineProps<{
@@ -9,24 +11,35 @@ const props = defineProps<{
 }>()
 const { t } = useI18n()
 
+const teams = computed(() => teamsForGame(props.game.partnership))
+
 function namesFor(team: TeamId): string {
   return props.game.partnership[team]
     .map((id) => props.players.find((p) => p.id === id)?.name ?? id)
     .join(' / ')
 }
+
+const teamColors: Record<TeamId, { border: string; bg: string; text: string }> = {
+  A: { border: 'border-wine/30', bg: 'bg-wine-light', text: 'text-wine' },
+  B: { border: 'border-sage/30', bg: 'bg-sage-light', text: 'text-sage' },
+  C: { border: 'border-gold/30', bg: 'bg-gold-light', text: 'text-gold' },
+}
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-4">
+  <div
+    class="grid gap-4"
+    :class="teams.length === 3 ? 'grid-cols-3' : 'grid-cols-2'"
+  >
     <div
-      v-for="team in (['A', 'B'] as const)"
+      v-for="team in teams"
       :key="team"
       class="rounded-2xl border p-5 text-center"
-      :class="team === 'A' ? 'border-wine/30 bg-wine-light' : 'border-sage/30 bg-sage-light'"
+      :class="[teamColors[team].border, teamColors[team].bg]"
     >
       <p
         class="text-sm font-semibold"
-        :class="team === 'A' ? 'text-wine' : 'text-sage'"
+        :class="teamColors[team].text"
       >
         {{ t(`game.team.${team}`) }}
       </p>

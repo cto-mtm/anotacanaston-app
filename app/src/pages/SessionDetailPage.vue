@@ -83,6 +83,9 @@ function onDelete() {
         <p class="text-sm text-clay">
           {{ t('game.team.A') }} {{ sessionsStore.getGameTotals(session.id, i).A }} —
           {{ t('game.team.B') }} {{ sessionsStore.getGameTotals(session.id, i).B }}
+          <template v-if="sessionsStore.getGameTeams(session.id, i).includes('C')">
+            — {{ t('game.team.C') }} {{ sessionsStore.getGameTotals(session.id, i).C }}
+          </template>
         </p>
         <p
           v-if="sessionsStore.getGameResult(session.id, i).finished"

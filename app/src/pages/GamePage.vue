@@ -10,6 +10,7 @@ import BaseButton from '../components/BaseButton.vue'
 import BackButton from '../components/BackButton.vue'
 import PencilIcon from '../components/icons/PencilIcon.vue'
 import TrashIcon from '../components/icons/TrashIcon.vue'
+import type { TeamId } from '../domain/types'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -21,13 +22,14 @@ const gameIndex = computed(() => Number(route.params.g))
 const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
 
+const teams = computed(() => sessionsStore.getGameTeams(sessionId.value, gameIndex.value))
 const totals = computed(() => sessionsStore.getGameTotals(sessionId.value, gameIndex.value))
 const thresholds = computed(() => sessionsStore.getMeldThresholds(sessionId.value, gameIndex.value))
 const result = computed(() => sessionsStore.getGameResult(sessionId.value, gameIndex.value))
 
 const isLastGame = computed(() => (session.value ? gameIndex.value === session.value.games.length - 1 : false))
 
-function roundTotal(roundIndex: number, team: 'A' | 'B'): number {
+function roundTotal(roundIndex: number, team: TeamId): number {
   const round = game.value?.rounds[roundIndex]
   return round ? scoreRound(round.entries[team]).total : 0
 }
@@ -79,14 +81,15 @@ function onDeleteRound(roundIndex: number) {
       </RouterLink>
     </div>
 
-    <div class="my-5 grid grid-cols-2 gap-4">
+    <div
+      class="my-5 grid gap-4"
+      :class="teams.length === 3 ? 'grid-cols-3' : 'grid-cols-2'"
+    >
       <ThresholdBanner
-        team="A"
-        :threshold="thresholds.A"
-      />
-      <ThresholdBanner
-        team="B"
-        :threshold="thresholds.B"
+        v-for="team in teams"
+        :key="team"
+        :team="team"
+        :threshold="thresholds[team]"
       />
     </div>
 
@@ -123,7 +126,12 @@ function onDeleteRound(roundIndex: number) {
         :key="i"
         class="flex items-center justify-between rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
       >
-        <span class="text-walnut">{{ t('game.team.A') }}: {{ roundTotal(i, 'A') }} · {{ t('game.team.B') }}: {{ roundTotal(i, 'B') }}</span>
+        <span class="text-walnut">
+          <span v-for="(team, ti) in teams" :key="team">
+            <span v-if="ti > 0"> · </span>
+            {{ t(`game.team.${team}`) }}: {{ roundTotal(i, team) }}
+          </span>
+        </span>
         <span class="flex gap-1">
           <RouterLink
             :to="`/sessions/${sessionId}/games/${gameIndex}/rounds/${i}`"

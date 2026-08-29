@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import CanastaCounter from './CanastaCounter.vue'
+import CanastaCounterPair from './CanastaCounterPair.vue'
 import { ALL_CANASTA_TYPES } from '../domain/constants'
 import type { CanastaType, Player, TeamRoundEntry } from '../domain/types'
 
@@ -14,6 +14,10 @@ function patch(partial: Partial<TeamRoundEntry>) {
 
 function setCanasta(type: CanastaType, value: number) {
   patch({ canastas: { ...props.modelValue.canastas, [type]: value } })
+}
+
+function setCanastaEnMano(type: CanastaType, value: number) {
+  patch({ canastasEnMano: { ...props.modelValue.canastasEnMano, [type]: value } })
 }
 
 function setHandPoints(playerId: string, value: number) {
@@ -87,12 +91,14 @@ function numberFrom(event: Event): number {
     </label>
 
     <div class="mt-3 border-t border-rose/30 pt-3">
-      <CanastaCounter
+      <CanastaCounterPair
         v-for="type in ALL_CANASTA_TYPES"
         :key="type"
         :label="t(`game.canastaType.${type}`)"
-        :model-value="modelValue.canastas[type]"
-        @update:model-value="setCanasta(type, $event)"
+        :base="modelValue.canastas[type]"
+        :en-mano="modelValue.canastasEnMano[type]"
+        @update:base="setCanasta(type, $event)"
+        @update:en-mano="setCanastaEnMano(type, $event)"
       />
     </div>
 

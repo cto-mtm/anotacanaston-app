@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildFourPlayerSchedule, buildSixPlayerGames } from './rotation'
+import { buildFourPlayerSchedule, buildSixPlayerGames2x3, buildSixPlayerGames3x2 } from './rotation'
 
-function pairKey(partnership: Record<'A' | 'B', string[]>): string {
+function pairKey(partnership: Record<'A' | 'B' | 'C', string[]>): string {
   return [...partnership.A].sort().join(',') + '|' + [...partnership.B].sort().join(',')
 }
 
@@ -9,7 +9,7 @@ describe('buildFourPlayerSchedule', () => {
   const players = ['p1', 'p2', 'p3', 'p4'] // clockwise seat order
   const manoId = 'p1'
   const dealerId = 'p2' // to mano's left
-  const initialPartnership = { A: ['p1', 'p2'], B: ['p3', 'p4'] }
+  const initialPartnership = { A: ['p1', 'p2'], B: ['p3', 'p4'], C: [] as string[] }
 
   const games = buildFourPlayerSchedule(players, manoId, dealerId, initialPartnership)
 
@@ -46,9 +46,6 @@ describe('buildFourPlayerSchedule', () => {
   })
 
   it('every player partners with every other player exactly once across all 6 team-slots', () => {
-    // 3 games x 2 teams = 6 team assignments; with 4 players there are
-    // exactly C(4,2)=6 possible pairs, so this is a stronger property
-    // than "3 distinct pairings" — every possible pair appears once.
     const pairs = new Set<string>()
     for (const game of games) {
       for (const team of ['A', 'B'] as const) {
@@ -60,11 +57,11 @@ describe('buildFourPlayerSchedule', () => {
   })
 })
 
-describe('buildSixPlayerGames', () => {
+describe('buildSixPlayerGames2x3', () => {
   it('accepts well-formed manual partnerships', () => {
-    const games = buildSixPlayerGames([
+    const games = buildSixPlayerGames2x3([
       {
-        partnership: { A: ['p1', 'p2', 'p3'], B: ['p4', 'p5', 'p6'] },
+        partnership: { A: ['p1', 'p2', 'p3'], B: ['p4', 'p5', 'p6'], C: [] },
         dealerId: 'p2',
         manoId: 'p1',
       },
@@ -74,9 +71,9 @@ describe('buildSixPlayerGames', () => {
 
   it('rejects teams that are not exactly 3 players', () => {
     expect(() =>
-      buildSixPlayerGames([
+      buildSixPlayerGames2x3([
         {
-          partnership: { A: ['p1', 'p2'], B: ['p3', 'p4', 'p5', 'p6'] },
+          partnership: { A: ['p1', 'p2'], B: ['p3', 'p4', 'p5', 'p6'], C: [] },
           dealerId: 'p2',
           manoId: 'p1',
         },
@@ -86,9 +83,46 @@ describe('buildSixPlayerGames', () => {
 
   it('rejects duplicate players across teams', () => {
     expect(() =>
-      buildSixPlayerGames([
+      buildSixPlayerGames2x3([
         {
-          partnership: { A: ['p1', 'p2', 'p3'], B: ['p3', 'p4', 'p5'] },
+          partnership: { A: ['p1', 'p2', 'p3'], B: ['p3', 'p4', 'p5'], C: [] },
+          dealerId: 'p2',
+          manoId: 'p1',
+        },
+      ]),
+    ).toThrow()
+  })
+})
+
+describe('buildSixPlayerGames3x2', () => {
+  it('accepts well-formed 3x2 partnerships', () => {
+    const games = buildSixPlayerGames3x2([
+      {
+        partnership: { A: ['p1', 'p2'], B: ['p3', 'p4'], C: ['p5', 'p6'] },
+        dealerId: 'p2',
+        manoId: 'p1',
+      },
+    ])
+    expect(games).toHaveLength(1)
+  })
+
+  it('rejects teams that are not exactly 2 players', () => {
+    expect(() =>
+      buildSixPlayerGames3x2([
+        {
+          partnership: { A: ['p1', 'p2', 'p3'], B: ['p4', 'p5'], C: ['p6'] },
+          dealerId: 'p2',
+          manoId: 'p1',
+        },
+      ]),
+    ).toThrow()
+  })
+
+  it('rejects duplicate players across teams', () => {
+    expect(() =>
+      buildSixPlayerGames3x2([
+        {
+          partnership: { A: ['p1', 'p2'], B: ['p2', 'p3'], C: ['p4', 'p5'] },
           dealerId: 'p2',
           manoId: 'p1',
         },

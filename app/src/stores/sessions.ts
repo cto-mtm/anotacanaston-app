@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import { z } from 'zod'
 import { sessionSchema } from '../domain/schema'
 import { gameResult, gameTotals, meldThreshold, sessionTallies, sessionWinner } from '../domain/scoring'
-import { buildFourPlayerSchedule, buildSixPlayerGames, type GameSkeleton } from '../domain/rotation'
-import type { Game, Player, PlayerId, Session, TeamId, TeamRoundEntry } from '../domain/types'
+import { buildFourPlayerSchedule, buildSixPlayerGames2x3, buildSixPlayerGames3x2, type GameSkeleton } from '../domain/rotation'
+import { teamsForGame } from '../domain/constants'
+import type { Game, Player, PlayerId, Session, SixPlayerFormat, TeamId, TeamRoundEntry } from '../domain/types'
 
 export interface CreateFourPlayerSessionInput {
   date: string
@@ -18,6 +19,7 @@ export interface CreateFourPlayerSessionInput {
 export interface CreateSixPlayerSessionInput {
   date: string
   playerCount: 6
+  sixPlayerFormat: SixPlayerFormat
   players: Player[]
   manoId: PlayerId
   games: Array<{ partnership: Record<TeamId, PlayerId[]>; dealerId: PlayerId; manoId: PlayerId }>
@@ -47,7 +49,11 @@ export const useSessionsStore = defineStore(
         )
         initialDealerId = input.initialDealerId
       } else {
-        gameSkeletons = buildSixPlayerGames(input.games)
+        if (input.sixPlayerFormat === '3x2') {
+          gameSkeletons = buildSixPlayerGames3x2(input.games)
+        } else {
+          gameSkeletons = buildSixPlayerGames2x3(input.games)
+        }
         const firstDealer = gameSkeletons[0]?.dealerId
         if (!firstDealer) throw new Error('a 6-player session needs at least one game')
         initialDealerId = firstDealer
@@ -59,6 +65,7 @@ export const useSessionsStore = defineStore(
         id: crypto.randomUUID(),
         date: input.date,
         playerCount: input.playerCount,
+        sixPlayerFormat: input.playerCount === 6 ? input.sixPlayerFormat : undefined,
         players: input.players,
         manoId: input.manoId,
         initialDealerId,
@@ -117,7 +124,7 @@ export const useSessionsStore = defineStore(
 
     function getGameTotals(sessionId: string, gameIndex: number): Record<TeamId, number> {
       const game = findSession(sessionId)?.games[gameIndex]
-      return game ? gameTotals(game) : { A: 0, B: 0 }
+      return game ? gameTotals(game) : { A: 0, B: 0, C: 0 }
     }
 
     function getGameResult(sessionId: string, gameIndex: number) {
@@ -127,7 +134,16 @@ export const useSessionsStore = defineStore(
 
     function getMeldThresholds(sessionId: string, gameIndex: number) {
       const totals = getGameTotals(sessionId, gameIndex)
-      return { A: meldThreshold(totals.A), B: meldThreshold(totals.B) }
+      const game = findSession(sessionId)?.games[gameIndex]
+      const teams = game ? teamsForGame(game.partnership) : (['A', 'B'] as TeamId[])
+      const result: Partial<Record<TeamId, ReturnType<typeof meldThreshold>>> = {}
+      for (const team of teams) result[team] = meldThreshold(totals[team])
+      return result as Record<TeamId, ReturnType<typeof meldThreshold>>
+    }
+
+    function getGameTeams(sessionId: string, gameIndex: number): TeamId[] {
+      const game = findSession(sessionId)?.games[gameIndex]
+      return game ? teamsForGame(game.partnership) : ['A', 'B']
     }
 
     function getSessionTallies(sessionId: string): Record<PlayerId, number> {
@@ -153,6 +169,7 @@ export const useSessionsStore = defineStore(
       getGameTotals,
       getGameResult,
       getMeldThresholds,
+      getGameTeams,
       getSessionTallies,
       getSessionWinner,
     }

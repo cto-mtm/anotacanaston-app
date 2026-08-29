@@ -1,4 +1,4 @@
-import type { CanastaType, PlayerCount } from './types'
+import type { CanastaType, PlayerCount, TeamId } from './types'
 
 export const CANASTA_VALUES: Record<CanastaType, number> = {
   clean: 500,
@@ -6,6 +6,7 @@ export const CANASTA_VALUES: Record<CanastaType, number> = {
   cleanAce: 1000,
   dirtyAce: 500,
   cleanDeuce: 2000,
+  dirtyDeuce: 3000,
   joker: 5000,
   monkey: 4000,
 }
@@ -20,7 +21,7 @@ export const CLEAN_CANASTA_TYPES: readonly CanastaType[] = [
 ]
 
 /** Canasta types that count as "dirty" for the honors matrix and la ida validity. */
-export const DIRTY_CANASTA_TYPES: readonly CanastaType[] = ['dirty', 'dirtyAce']
+export const DIRTY_CANASTA_TYPES: readonly CanastaType[] = ['dirty', 'dirtyAce', 'dirtyDeuce']
 
 export const ALL_CANASTA_TYPES: readonly CanastaType[] = [
   ...CLEAN_CANASTA_TYPES,
@@ -96,3 +97,8 @@ export const MELD_THRESHOLDS: ReadonlyArray<{ max: number; points: number; clean
   { max: 12_000, points: 180 },
 ]
 export const MELD_THRESHOLD_DEFAULT = 200
+
+/** Returns the team IDs relevant for a given game based on which teams have players. */
+export function teamsForGame(partnership: Record<TeamId, string[]>): TeamId[] {
+  return (['A', 'B', 'C'] as const).filter((t) => partnership[t].length > 0)
+}
