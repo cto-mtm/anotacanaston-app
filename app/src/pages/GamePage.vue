@@ -31,7 +31,7 @@ const isLastGame = computed(() => (session.value ? gameIndex.value === session.v
 
 function roundTotal(roundIndex: number, team: TeamId): number {
   const round = game.value?.rounds[roundIndex]
-  return round ? scoreRound(round.entries[team]).total : 0
+  return round ? scoreRound(round.entries[team], sessionsStore.getSessionRules(sessionId.value)).total : 0
 }
 
 function onDeleteRound(roundIndex: number) {

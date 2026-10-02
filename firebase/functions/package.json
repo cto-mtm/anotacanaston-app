@@ -1,7 +1,9 @@
 {
   "name": "anotacanaston-functions",
   "description": "Cloud Functions API for the Anota Canaston app",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
@@ -12,6 +14,7 @@
   "dependencies": {
     "firebase-admin": "^13.0.0",
     "firebase-functions": "^6.3.0",
+    "stripe": "^17.7.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

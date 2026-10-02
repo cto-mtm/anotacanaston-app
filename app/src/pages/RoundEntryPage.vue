@@ -24,6 +24,7 @@ const roundIndex = computed(() => Number(route.params.r))
 const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
 const teams = computed(() => (game.value ? teamsForGame(game.value.partnership) : (['A', 'B'] as TeamId[])))
+const rules = computed(() => sessionsStore.getSessionRules(sessionId.value))
 
 // Mobile tab: show one team at a time on narrow screens
 const activeTeam = ref<TeamId>('A')
@@ -35,6 +36,8 @@ function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
   return {
     exactCut: false,
     misdeal: false,
+    badMelds: 0,
+    tableTalk: 0,
     honors: 0,
     canastas,
     canastasEnMano,
@@ -62,12 +65,12 @@ const entries = ref<Record<TeamId, TeamRoundEntry>>({
 
 const breakdowns = computed(() => {
   const result: Partial<Record<TeamId, ReturnType<typeof scoreRound>>> = {}
-  for (const team of teams.value) result[team] = scoreRound(entries.value[team])
+  for (const team of teams.value) result[team] = scoreRound(entries.value[team], rules.value)
   return result as Record<TeamId, ReturnType<typeof scoreRound>>
 })
 
 const validation = computed(() =>
-  validateRound({ entries: entries.value }, session.value?.playerCount ?? 4, teams.value),
+  validateRound({ entries: entries.value }, session.value?.playerCount ?? 4, rules.value, teams.value),
 )
 
 // Non-blocking: heads-up that a canasta combination looks off given the deck in play.
@@ -141,6 +144,7 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
           v-model="entries[team]"
           :players="playersFor(team)"
           :team-label="t(`game.team.${team}`)"
+          :penalty-value="rules.penaltyValue"
         />
         <p
           v-if="noCanastasClosed(entries[team])"

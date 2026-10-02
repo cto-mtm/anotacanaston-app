@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
+import { parseLocalDate } from '../lib/date'
+import { renderShareCard } from '../lib/shareCard'
+import { shareImage } from '../lib/share'
+import BaseButton from '../components/BaseButton.vue'
 
 const route = useRoute()
-const { t } = useI18n()
+const { t, d } = useI18n()
 const sessionsStore = useSessionsStore()
 
 const session = computed(() => sessionsStore.findSession(route.params.id as string))
 const tallies = computed(() => (session.value ? sessionsStore.getSessionTallies(session.value.id) : {}))
 const winners = computed(() => (session.value ? sessionsStore.getSessionWinner(session.value.id) : []))
+const roundedScoring = computed(() =>
+  session.value ? sessionsStore.getSessionRules(session.value.id).sessionScoring === 'roundedThousands' : false,
+)
+
+// Rounded tallies are ± differences, so the sign is part of the score.
+function formatTally(score: number): string {
+  return roundedScoring.value && score > 0 ? `+${score}` : String(score)
+}
 
 function playerName(id: string): string {
   return session.value?.players.find((p) => p.id === id)?.name ?? id
@@ -23,6 +35,44 @@ const sortedTallies = computed(() =>
         .sort((a, b) => b.score - a.score)
     : [],
 )
+
+const sharing = ref(false)
+
+async function onShare() {
+  const current = session.value
+  if (!current || sharing.value) return
+  sharing.value = true
+  try {
+    // Wait for the app's web fonts so the canvas renders in Fondamento/DM Sans
+    // rather than the generic fallback.
+    if (document.fonts?.ready) await document.fonts.ready
+
+    const dateLabel = d(parseLocalDate(current.date), 'short')
+    const dataUrl = renderShareCard({
+      dateLabel,
+      winnerLabel: winners.value.length > 1 ? t('summary.winners') : t('summary.winner'),
+      winnerNames: winners.value.map(playerName).join(' / '),
+      talliesLabel: t('summary.individualTallies'),
+      players: sortedTallies.value.map((p) => ({ name: p.name, score: formatTally(p.score) })),
+      brandLabel: 'Anota Canaston',
+      ctaLabel: t('summary.shareCta'),
+    })
+
+    const outcome = await shareImage({
+      dataUrl,
+      fileName: `anota-canaston-${current.date}`,
+      title: 'Anota Canaston',
+      text: t('summary.shareText'),
+    })
+
+    if (outcome === 'downloaded') alert(t('summary.shareDownloaded'))
+    else if (outcome === 'unsupported') alert(t('summary.shareError'))
+  } catch {
+    alert(t('summary.shareError'))
+  } finally {
+    sharing.value = false
+  }
+}
 </script>
 
 <template>
@@ -40,9 +90,12 @@ const sortedTallies = computed(() =>
       </p>
     </div>
 
-    <h2 class="mb-2 font-display text-lg text-walnut">
+    <h2 class="mb-1 font-display text-lg text-walnut">
       {{ t('summary.individualTallies') }}
     </h2>
+    <p class="mb-2 text-xs text-clay">
+      {{ roundedScoring ? t('summary.roundedScoringHint') : t('summary.rawScoringHint') }}
+    </p>
     <ol class="mb-6 space-y-2">
       <li
         v-for="(player, i) in sortedTallies"
@@ -51,7 +104,7 @@ const sortedTallies = computed(() =>
         :class="i === 0 ? 'bg-gold-light border-gold/30' : 'bg-linen'"
       >
         <span class="font-medium text-walnut">{{ player.name }}</span>
-        <span class="tabular-nums font-semibold text-walnut">{{ player.score }}</span>
+        <span class="tabular-nums font-semibold text-walnut">{{ formatTally(player.score) }}</span>
       </li>
     </ol>
 
@@ -105,11 +158,19 @@ const sortedTallies = computed(() =>
       </table>
     </div>
 
-    <RouterLink
-      :to="`/sessions/${session.id}`"
-      class="mt-6 inline-block text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
-    >
-      {{ t('summary.backToSession') }}
-    </RouterLink>
+    <div class="mt-6 flex items-center justify-between gap-4">
+      <RouterLink
+        :to="`/sessions/${session.id}`"
+        class="text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
+      >
+        {{ t('summary.backToSession') }}
+      </RouterLink>
+      <BaseButton
+        :disabled="sharing"
+        @click="onShare"
+      >
+        {{ sharing ? t('summary.sharing') : t('summary.share') }}
+      </BaseButton>
+    </div>
   </div>
 </template>

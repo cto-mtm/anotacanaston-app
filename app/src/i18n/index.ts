@@ -9,9 +9,11 @@ import gameScreen from './locales/pages/gameScreen'
 import roundEntry from './locales/pages/roundEntry'
 import summary from './locales/pages/summary'
 import rules from './locales/pages/rules'
+import settings from './locales/pages/settings'
 import about from './locales/pages/about'
 import notFound from './locales/pages/notFound'
 import welcome from './locales/pages/welcome'
+import account from './locales/pages/account'
 
 export const SUPPORTED_LOCALES = ['es', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
@@ -28,9 +30,11 @@ const messages = {
     roundEntry: roundEntry.es,
     summary: summary.es,
     rules: rules.es,
+    settings: settings.es,
     about: about.es,
     notFound: notFound.es,
     welcome: welcome.es,
+    account: account.es,
   },
   en: {
     common: common.en,
@@ -43,9 +47,11 @@ const messages = {
     roundEntry: roundEntry.en,
     summary: summary.en,
     rules: rules.en,
+    settings: settings.en,
     about: about.en,
     notFound: notFound.en,
     welcome: welcome.en,
+    account: account.en,
   },
 }
 

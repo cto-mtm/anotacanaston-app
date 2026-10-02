@@ -4,7 +4,7 @@ import CanastaCounterPair from './CanastaCounterPair.vue'
 import { ALL_CANASTA_TYPES } from '../domain/constants'
 import type { CanastaType, Player, TeamRoundEntry } from '../domain/types'
 
-const props = defineProps<{ modelValue: TeamRoundEntry; players: Player[]; teamLabel: string }>()
+const props = defineProps<{ modelValue: TeamRoundEntry; players: Player[]; teamLabel: string; penaltyValue: number }>()
 const emit = defineEmits<{ 'update:modelValue': [value: TeamRoundEntry] }>()
 const { t } = useI18n()
 
@@ -56,8 +56,31 @@ function numberFrom(event: Event): number {
         :checked="modelValue.misdeal"
         @change="patch({ misdeal: checked($event) })"
       >
-      {{ t('roundEntry.misdealLabel') }}
+      {{ t('roundEntry.misdealLabel', { points: penaltyValue }) }}
     </label>
+
+    <div class="flex items-center justify-between py-2">
+      <label class="text-sm text-walnut">{{ t('roundEntry.badMeldsLabel', { points: penaltyValue }) }}</label>
+      <input
+        type="number"
+        inputmode="numeric"
+        min="0"
+        class="w-16 rounded-lg border border-rose/40 bg-ivory py-2 text-center text-base text-walnut focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine/30"
+        :value="modelValue.badMelds"
+        @input="patch({ badMelds: numberFrom($event) })"
+      >
+    </div>
+    <div class="flex items-center justify-between py-2">
+      <label class="text-sm text-walnut">{{ t('roundEntry.tableTalkLabel', { points: penaltyValue }) }}</label>
+      <input
+        type="number"
+        inputmode="numeric"
+        min="0"
+        class="w-16 rounded-lg border border-rose/40 bg-ivory py-2 text-center text-base text-walnut focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine/30"
+        :value="modelValue.tableTalk"
+        @input="patch({ tableTalk: numberFrom($event) })"
+      >
+    </div>
 
     <div class="flex items-center justify-between py-2">
       <label class="text-sm text-walnut">{{ t('roundEntry.honorsLabel') }}</label>

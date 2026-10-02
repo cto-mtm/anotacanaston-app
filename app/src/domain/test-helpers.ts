@@ -8,7 +8,6 @@ const EMPTY_CANASTAS: Record<CanastaType, number> = {
   cleanDeuce: 0,
   dirtyDeuce: 0,
   joker: 0,
-  monkey: 0,
 }
 
 export function makeEntry(overrides: Partial<TeamRoundEntry> = {}): TeamRoundEntry {
@@ -16,6 +15,8 @@ export function makeEntry(overrides: Partial<TeamRoundEntry> = {}): TeamRoundEnt
   return {
     exactCut: false,
     misdeal: false,
+    badMelds: 0,
+    tableTalk: 0,
     honors: 0,
     wentOut: false,
     blackThreesBonus: false,

@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { registerNative } from './lib/native'
+import { registerAuth } from './lib/auth'
 import { createPersistencePlugin } from './lib/persistence'
 import { useSettingsStore } from './stores/settings'
 import './assets/css/main.css'
@@ -23,5 +24,8 @@ const settings = useSettingsStore()
 i18n.global.locale.value = settings.locale
 
 registerNative(router)
+// Bridge Firebase auth state into the account store + kick off cloud sync for
+// entitled users. Safe no-op when no one is signed in.
+registerAuth()
 
 app.mount('#app')

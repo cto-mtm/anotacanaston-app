@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '../stores/account'
+import { signInWithGoogle } from '../lib/auth'
 import BaseButton from '../components/BaseButton.vue'
 import logo from '../assets/images/logo-color.svg'
 
@@ -10,15 +12,35 @@ const route = useRoute()
 const router = useRouter()
 const account = useAccountStore()
 
-function continueOffline() {
-  account.continueOffline()
+const signingIn = ref(false)
+const signInError = ref(false)
+
+function redirectTarget(): string {
   const redirect = route.query.redirect
   // In-app paths only — anything else (or absent) falls back to home.
-  const target =
-    typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
-      ? redirect
-      : '/'
-  router.replace(target)
+  return typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+    ? redirect
+    : '/'
+}
+
+function continueOffline() {
+  account.continueOffline()
+  router.replace(redirectTarget())
+}
+
+async function signIn() {
+  if (signingIn.value) return
+  signingIn.value = true
+  signInError.value = false
+  try {
+    await signInWithGoogle()
+    // registerAuth()'s onAuthStateChanged flips the store into signedIn mode.
+    router.replace(redirectTarget())
+  } catch {
+    signInError.value = true
+  } finally {
+    signingIn.value = false
+  }
 }
 </script>
 
@@ -54,23 +76,25 @@ function continueOffline() {
     </section>
 
     <section class="w-full rounded-2xl border border-dashed border-rose/60 bg-ivory p-6">
-      <div class="flex items-center justify-center gap-2">
-        <h2 class="font-display text-lg text-clay">
-          {{ t('welcome.cloudTitle') }}
-        </h2>
-        <span class="rounded-full bg-wine-light px-2.5 py-0.5 text-xs font-medium text-wine">
-          {{ t('welcome.comingSoon') }}
-        </span>
-      </div>
+      <h2 class="font-display text-lg text-clay">
+        {{ t('welcome.cloudTitle') }}
+      </h2>
       <p class="mt-1 text-sm text-clay">
         {{ t('welcome.cloudBody') }}
       </p>
       <BaseButton
         class="mt-4 w-full"
-        disabled
+        :disabled="signingIn"
+        @click="signIn"
       >
-        {{ t('welcome.signIn') }}
+        {{ signingIn ? t('account.signingIn') : t('account.signIn') }}
       </BaseButton>
+      <p
+        v-if="signInError"
+        class="mt-2 text-sm text-wine"
+      >
+        {{ t('account.signInError') }}
+      </p>
     </section>
   </div>
 </template>

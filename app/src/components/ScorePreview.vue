@@ -8,6 +8,7 @@ const { t } = useI18n()
 const LINES: Array<{ key: keyof RoundScoreBreakdown; labelKey: string }> = [
   { key: 'cut', labelKey: 'game.exactCut' },
   { key: 'misdeal', labelKey: 'game.misdeal' },
+  { key: 'penalties', labelKey: 'game.penalties' },
   { key: 'honors', labelKey: 'game.honors' },
   { key: 'canastas', labelKey: 'game.canastas' },
   { key: 'countBonus', labelKey: 'game.countBonus' },

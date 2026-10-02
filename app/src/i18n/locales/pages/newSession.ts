@@ -21,6 +21,8 @@ const es = {
   addGame: 'Agregar partida',
   removeGame: 'Quitar partida',
   createSession: 'Crear partida',
+  houseRulesHint: 'La partida usa las reglas de la casa configuradas en Ajustes.',
+  houseRulesLink: 'Ver reglas de la casa',
   validation: {
     needAllNames: 'Completá el nombre de todos los jugadores.',
     needUniqueNames: 'Los nombres de los jugadores deben ser distintos.',
@@ -53,6 +55,8 @@ const en: typeof es = {
   addGame: 'Add game',
   removeGame: 'Remove game',
   createSession: 'Create session',
+  houseRulesHint: 'The session uses the house rules set in Settings.',
+  houseRulesLink: 'See house rules',
   validation: {
     needAllNames: 'Fill in every player name.',
     needUniqueNames: 'Player names must be distinct.',

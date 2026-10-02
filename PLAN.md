@@ -19,8 +19,11 @@ Build **Anota Canaston**, a scorekeeper app for the card game Canastón (house-r
 ## Rule interpretations (assumptions baked into the engine)
 
 - **Meld thresholds** use `<=` boundaries: ≤3,000→50 (clean-melds-only note), ≤5,000→90, ≤7,000→120, ≤10,000→160, ≤12,000→180, else 200. Negative cumulative scores fall in the first bracket.
-- **Canastón/Super Canastón bonus** is non-stacking on total closed canastas: ≥12→+5,000, else ≥9→+3,000.
-- **Clean vs dirty sets** (for the honors matrix and la ida validity): clean = {limpia, ases limpia, patos, joker canasta, mono}; dirty = {sucia, ases sucia}. One constant, easy to change.
+- **House rules are per session.** Canasta values, Canastón/Super Canastón thresholds and bonuses, the penalty value, the game target and the session-tally method live in `HouseRules` (`domain/rules.ts`). The settings store holds the group's defaults (`DEFAULT_RULES` = the printed rule sheet); every new session snapshots them into `session.rules` (required), so changing the defaults never rescores an existing session.
+- **Canastón/Super Canastón bonus** is non-stacking on total closed canastas: ≥11→+5,000, else ≥9→+3,000 (defaults).
+- **Penalties:** misdeal is a checkbox; bad melds and table talk are per-occurrence counters. All three subtract `rules.penaltyValue` (default 500).
+- **Session tally (default `roundedThousands`):** each game's team totals are rounded to the nearest thousand (`Math.round(x / 1000)`, halves up); each player gets their team's rounded score minus each opponent's, summed across opponents (2 teams: plain difference; 3 teams: pairwise, still zero-sum), then summed across games. `rawPoints` is the plain sum of team totals.
+- **Clean vs dirty sets** (for the honors matrix and la ida validity): clean = {limpia, ases limpia, limpia de patos, limpia de comodines}; dirty = {sucia, ases sucia, sucia de monos}. One constant, easy to change.
 - **Honors**: clean+dirty closed → 100/honor (1–3) or 200/honor (4+); only clean → 0; only dirty or none → −200/honor (1–3) or −400/honor (4+), extending to 7→−2,800, 8→−3,200 for 6-player.
 - **No canastas closed**: the form still collects melded points + per-player hand points; the engine **negates the melded points** and shows a "Sin canastas: todo cuenta en contra" warning — no separate input field.
 - **4-player rotation**: game 1 = chosen partnership; games 2–3 cover the remaining two pairings. Dealer and mano fixed for games 1–2; in game 3 the dealer moves one seat clockwise (skipping the mano — mano never deals, never moves).
@@ -29,6 +32,7 @@ Build **Anota Canaston**, a scorekeeper app for the card game Canastón (house-r
 - **Both teams ≥15,000 tied** → no winner yet, play another round. Session winner (`sessionWinner`) returns an array of PlayerIds to handle tied individual tallies.
 - **Dealer/mano are tracked per GAME, not per round.** The house spec only defines their movement between partnership combinations; the app does not rotate the deal within a game.
 - **Attribution hints (soft, not blocking):** exact cut belongs to the cutter's team (the dealer's right-hand opponent cuts); misdeal belongs to the dealer's team. The round form pre-highlights the corresponding team's checkbox but never hard-blocks.
+- **En mano (×2):** a canasta melded straight from hand scores double its base value. Tracked as a second counter per canasta type (`canastasEnMano`), and counts toward la ida's clean/dirty requirement, the honors bracket, and the Canastón / Super Canastón count exactly like a regular canasta.
 - **Melded points include cards inside canastas** (canasta bonuses are in addition to card values) — shown as a hint under the field.
 
 ## Cross-team round validations (`validateRound(round, playerCount)` in scoring.ts)
@@ -44,17 +48,18 @@ Per-team checks return `violations` from `scoreRound`; these ROUND-level checks 
 
 - Doubling of negative hand points for a team that never made its opening meld.
 - −500 penalty per red three found in a player's hand at round end.
-- The 5-canasta extra bonuses (+1,000 / +2,000) — replaced by the house Canastón (9→+3,000) / Super Canastón (12→+5,000).
+- The 5-canasta extra bonuses (+1,000 / +2,000) — replaced by the house Canastón (9→+3,000) / Super Canastón (11→+5,000).
 - 12,000-point game target — the house target is 15,000.
 - No-closing-bonus-when-stock-exhausted bookkeeping — la ida is simply a checkbox the user leaves unchecked.
 
 ## Domain model (`app/src/domain/` — pure TS, zero Vue imports)
 
-- `types.ts`: `Session { date, playerCount: 4|6, players (clockwise seat order), manoId, initialDealerId, plannedGames, games, status }` → `Game { partnership {A,B}, dealerId, manoId, rounds }` → `Round { entries: Record<'A'|'B', TeamRoundEntry> }` → `TeamRoundEntry { exactCut, misdeal, honors, canastas: Record<CanastaType, number>, wentOut, blackThreesBonus, meldedPoints, handPoints: Record<PlayerId, number> }`. CanastaType = `clean|dirty|cleanAce|dirtyAce|cleanDeuce|joker|monkey`.
+- `types.ts`: `Session { date, playerCount: 4|6, players (clockwise seat order), manoId, initialDealerId, plannedGames, games, status }` → `Game { partnership {A,B}, dealerId, manoId, rounds }` → `Round { entries: Record<'A'|'B', TeamRoundEntry> }` → `TeamRoundEntry { exactCut, misdeal, honors, canastas: Record<CanastaType, number>, canastasEnMano: Record<CanastaType, number>, wentOut, blackThreesBonus, meldedPoints, handPoints: Record<PlayerId, number> }`. CanastaType = `clean|dirty|cleanAce|dirtyAce|cleanDeuce|dirtyDeuce|joker` (no separate `monkey` type — a canastón de mono is an en-mano `dirtyDeuce`, 2,000 × 2).
 - **Only raw entries are stored.** Round scores, cumulative totals, thresholds, winners, and per-player session tallies are always recomputed — editing a past round re-flows everything.
-- `constants.ts`: canasta values (clean 500, dirty 300, cleanAce 1000, dirtyAce 500, cleanDeuce 2000, joker 5000, monkey 4000), `GAME_TARGET = 15_000`, honors matrix, threshold table, clean/dirty type sets.
-- `scoring.ts`: `scoreRound(entry) → RoundScoreBreakdown { cut, misdeal, honors, canastas, countBonus, goingOut, melded, hand, total, violations }`, `validateRound(round, playerCount)` (cross-team checks above), plus `gameTotals`, `gameResult`, `meldThreshold(cumulative)`, `sessionTallies`, `sessionWinner`.
-  - Formula reference: `cut = exactCut ? 500 : 0` · `misdeal = misdeal ? -500 : 0` · `honors` per matrix · `canastas = Σ count[t]·value[t]` · `countBonus = total≥12 ? 5000 : total≥9 ? 3000 : 0` · `goingOut = validIda ? 300 + (blackThreesBonus ? 300 : 0) : 0` · `melded = totalCanastas>0 ? +meldedPoints : -meldedPoints` · `hand = -Σ handPoints[p]`.
+- `constants.ts`: universal values only — honors matrix, threshold table, clean/dirty type sets, deck sizes.
+- `rules.ts`: `DEFAULT_RULES` (clean 500, dirty 300, cleanAce 1000, dirtyAce 500, cleanDeuce 3000, dirtyDeuce 2000, joker 5000; Canastón 9→3,000; Super 11→5,000; penalty 500; target 15,000; `roundedThousands`), `cloneRules`.
+- `scoring.ts`: `scoreRound(entry, rules) → RoundScoreBreakdown { cut, misdeal, penalties, honors, canastas, countBonus, goingOut, melded, hand, total, violations }`, `validateRound(round, playerCount, rules)` (cross-team checks above), plus `gameTotals(game, rules)`, `gameResult(game, rules)`, `meldThreshold(cumulative)`, `gameTallyPoints`, `sessionTallies`, `sessionWinner`.
+  - Formula reference: `cut = exactCut ? 500 : 0` · `misdeal = misdeal ? -penalty : 0` · `penalties = -(badMelds + tableTalk)·penalty` · `honors` per matrix · `canastas = Σ (canastas[t]·value[t] + canastasEnMano[t]·value[t]·2)` · `countBonus = total≥superThreshold ? superBonus : total≥canastonThreshold ? canastonBonus : 0` · `goingOut = validIda ? 300 + (blackThreesBonus ? 300 : 0) : 0` · `melded = totalCanastas>0 ? +meldedPoints : -meldedPoints` · `hand = -Σ handPoints[p]`.
 - `rotation.ts`: `buildFourPlayerSchedule(players, manoId, dealerId, initialPartnership)` and the manual 6-player schedule builder.
 - `schema.ts`: zod schemas mirroring the types (zod is already a boilerplate dep) — used by the persistence layer.
 

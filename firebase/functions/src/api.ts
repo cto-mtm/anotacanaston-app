@@ -1,21 +1,60 @@
-import { onRequest } from 'firebase-functions/v2/https'
+import { onRequest, type Request } from 'firebase-functions/v2/https'
 import { logger } from 'firebase-functions/v2'
-// import { defineSecret } from 'firebase-functions/params'
 import { applyCors } from './helpers/cors.js'
-import { echoSchema } from './models.js'
+import { adminAuth } from './helpers/admin.js'
+import {
+  createCheckoutSession,
+  handleWebhook,
+  stripeSecret,
+  stripeWebhookSecret,
+} from './helpers/billing.js'
+import { createCheckoutSchema, echoSchema } from './models.js'
 import { ZodError } from 'zod'
 
-// Example of how to add a secret later — don't define real ones here:
-// const exampleSecret = defineSecret('EXAMPLE_SECRET')
+const VALID_ROUTES = [
+  'GET /health',
+  'POST /echo',
+  'POST /billing/create-checkout-session',
+  'POST /billing/webhook',
+]
 
-const VALID_ROUTES = ['GET /health', 'POST /echo']
+/** Verifies the Firebase ID token from the Authorization header. */
+async function requireUser(req: Request): Promise<{ uid: string; email?: string } | null> {
+  const header = req.headers.authorization
+  if (typeof header !== 'string' || !header.startsWith('Bearer ')) return null
+  try {
+    const decoded = await adminAuth.verifyIdToken(header.slice('Bearer '.length))
+    return { uid: decoded.uid, email: decoded.email }
+  } catch {
+    return null
+  }
+}
 
 export const api = onRequest(
-  { region: 'us-central1', maxInstances: 10 },
-  (req, res) => {
-    if (applyCors(req, res)) return
-
+  { region: 'us-central1', maxInstances: 10, secrets: [stripeSecret, stripeWebhookSecret] },
+  async (req, res) => {
     const path = req.path.replace(/\/+$/, '') || '/'
+
+    // ── Stripe webhook: must run BEFORE CORS and reads the raw body for
+    // signature verification. Stripe calls server-to-server (no Origin).
+    if (req.method === 'POST' && path === '/billing/webhook') {
+      const signature = req.headers['stripe-signature']
+      if (typeof signature !== 'string') {
+        res.status(400).json({ error: 'missing stripe-signature' })
+        return
+      }
+      try {
+        const status = await handleWebhook(req.rawBody, signature)
+        logger.info('stripe webhook', { status })
+        res.json({ received: true })
+      } catch (err) {
+        logger.error('stripe webhook failed', err)
+        res.status(400).json({ error: 'webhook verification failed' })
+      }
+      return
+    }
+
+    if (applyCors(req, res)) return
 
     if (req.method === 'GET' && path === '/health') {
       logger.info('health check')
@@ -33,6 +72,28 @@ export const api = onRequest(
           return
         }
         throw err
+      }
+      return
+    }
+
+    // ── Create a Stripe Checkout Session for the signed-in user ──────
+    if (req.method === 'POST' && path === '/billing/create-checkout-session') {
+      const user = await requireUser(req)
+      if (!user) {
+        res.status(401).json({ error: 'unauthenticated' })
+        return
+      }
+      try {
+        const body = createCheckoutSchema.parse(req.body)
+        const url = await createCheckoutSession(user.uid, user.email, body.successUrl, body.cancelUrl)
+        res.json({ url })
+      } catch (err) {
+        if (err instanceof ZodError) {
+          res.status(400).json({ error: err.flatten() })
+          return
+        }
+        logger.error('create-checkout-session failed', err)
+        res.status(500).json({ error: 'could not create checkout session' })
       }
       return
     }

@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useSessionsStore } from '../stores/sessions'
+import { useSettingsStore } from '../stores/settings'
 import { buildFourPlayerSchedule } from '../domain/rotation'
 import PlayerPicker from '../components/PlayerPicker.vue'
 import PartnershipPicker from '../components/PartnershipPicker.vue'
@@ -12,6 +13,7 @@ import type { Player, PlayerId, SixPlayerFormat, TeamId } from '../domain/types'
 const { t } = useI18n()
 const router = useRouter()
 const sessionsStore = useSessionsStore()
+const settingsStore = useSettingsStore()
 
 const step = ref(1)
 const playerCount = ref<4 | 6>(4)
@@ -127,6 +129,7 @@ function create() {
     const others = players.value.map((p) => p.id).filter((id) => id !== manoId.value && id !== partnerId.value)
     const session = sessionsStore.createSession({
       date: date.value,
+      rules: settingsStore.houseRules,
       playerCount: 4,
       players: players.value,
       manoId: manoId.value,
@@ -140,6 +143,7 @@ function create() {
   if (!sixPlayerGamesValid.value) return
   const session = sessionsStore.createSession({
     date: date.value,
+    rules: settingsStore.houseRules,
     playerCount: 6,
     sixPlayerFormat: sixPlayerFormat.value,
     players: players.value,
@@ -231,6 +235,16 @@ function create() {
           class="mt-1 block w-full rounded-xl border border-rose/40 bg-ivory px-4 py-2.5 text-base text-walnut focus:border-wine focus:outline-none focus:ring-1 focus:ring-wine/30"
         >
       </label>
+
+      <p class="mt-4 text-sm text-clay">
+        {{ t('newSession.houseRulesHint') }}
+        <RouterLink
+          to="/settings"
+          class="font-medium text-wine hover:underline"
+        >
+          {{ t('newSession.houseRulesLink') }}
+        </RouterLink>
+      </p>
     </section>
 
     <!-- Step 2 -->

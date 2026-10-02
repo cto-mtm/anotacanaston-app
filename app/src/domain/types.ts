@@ -12,7 +12,28 @@ export type CanastaType =
   | 'cleanDeuce'
   | 'dirtyDeuce'
   | 'joker'
-  | 'monkey'
+
+/**
+ * How the individual session tally is computed:
+ * - `roundedThousands`: each game's team totals are rounded to the nearest
+ *   thousand and every player gets their team's rounded difference against
+ *   each opposing team (16 vs 14 → +2 / −2). Summed across the games.
+ * - `rawPoints`: each player gets their team's raw game total, summed.
+ */
+export type SessionScoringMethod = 'roundedThousands' | 'rawPoints'
+
+/** Scoring values that vary between groups — see domain/rules.ts. */
+export interface HouseRules {
+  canastaValues: Record<CanastaType, number>
+  canastonThreshold: number
+  canastonBonus: number
+  superCanastonThreshold: number
+  superCanastonBonus: number
+  /** Points (positive) subtracted per penalty: misdeal, bad meld, table talk. */
+  penaltyValue: number
+  gameTarget: number
+  sessionScoring: SessionScoringMethod
+}
 
 export interface Player {
   id: PlayerId
@@ -22,6 +43,10 @@ export interface Player {
 export interface TeamRoundEntry {
   exactCut: boolean
   misdeal: boolean
+  /** "Bajarse mal" — times the team melded incorrectly this round. */
+  badMelds: number
+  /** "Sugerir al compañero una jugada" — times a player suggested a play. */
+  tableTalk: number
   honors: number
   canastas: Record<CanastaType, number>
   /** "En mano" canastas — melded straight from hand, worth 2x the base value.
@@ -55,6 +80,8 @@ export interface Session {
   manoId: PlayerId
   initialDealerId: PlayerId
   plannedGames: number
+  /** House rules snapshotted at creation — every score in the session uses these. */
+  rules: HouseRules
   games: Game[]
   status: SessionStatus
 }

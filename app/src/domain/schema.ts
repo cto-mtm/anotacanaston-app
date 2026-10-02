@@ -10,7 +10,6 @@ export const canastaTypeSchema = z.enum([
   'cleanDeuce',
   'dirtyDeuce',
   'joker',
-  'monkey',
 ])
 
 export const canastasSchema = z.object({
@@ -21,24 +20,16 @@ export const canastasSchema = z.object({
   cleanDeuce: z.number().int().min(0),
   dirtyDeuce: z.number().int().min(0),
   joker: z.number().int().min(0),
-  monkey: z.number().int().min(0),
 })
 
 export const teamRoundEntrySchema = z.object({
   exactCut: z.boolean(),
   misdeal: z.boolean(),
+  badMelds: z.number().int().min(0),
+  tableTalk: z.number().int().min(0),
   honors: z.number().int().min(0),
   canastas: canastasSchema,
-  canastasEnMano: canastasSchema.default({
-    clean: 0,
-    dirty: 0,
-    cleanAce: 0,
-    dirtyAce: 0,
-    cleanDeuce: 0,
-    dirtyDeuce: 0,
-    joker: 0,
-    monkey: 0,
-  }),
+  canastasEnMano: canastasSchema,
   wentOut: z.boolean(),
   blackThreesBonus: z.boolean(),
   meldedPoints: z.number().int().min(0),
@@ -64,6 +55,25 @@ export const gameSchema = z.object({
   rounds: z.array(roundSchema),
 })
 
+export const houseRulesSchema = z.object({
+  canastaValues: z.object({
+    clean: z.number().int().min(0),
+    dirty: z.number().int().min(0),
+    cleanAce: z.number().int().min(0),
+    dirtyAce: z.number().int().min(0),
+    cleanDeuce: z.number().int().min(0),
+    dirtyDeuce: z.number().int().min(0),
+    joker: z.number().int().min(0),
+  }),
+  canastonThreshold: z.number().int().positive(),
+  canastonBonus: z.number().int().min(0),
+  superCanastonThreshold: z.number().int().positive(),
+  superCanastonBonus: z.number().int().min(0),
+  penaltyValue: z.number().int().min(0),
+  gameTarget: z.number().int().positive(),
+  sessionScoring: z.enum(['roundedThousands', 'rawPoints']),
+})
+
 export const playerSchema = z.object({
   id: playerIdSchema,
   name: z.string().min(1),
@@ -78,6 +88,7 @@ export const sessionSchema = z.object({
   manoId: playerIdSchema,
   initialDealerId: playerIdSchema,
   plannedGames: z.number().int().positive(),
+  rules: houseRulesSchema,
   games: z.array(gameSchema),
   status: z.enum(['in_progress', 'finished']),
 })

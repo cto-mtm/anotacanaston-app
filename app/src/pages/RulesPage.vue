@@ -3,13 +3,15 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   ALL_CANASTA_TYPES,
-  CANASTA_VALUES,
   MELD_THRESHOLDS,
   MELD_THRESHOLD_DEFAULT,
 } from '../domain/constants'
 import { honorsValueForKind } from '../domain/scoring'
+import { useSettingsStore } from '../stores/settings'
 
 const { t, n } = useI18n()
+const settingsStore = useSettingsStore()
+const rules = computed(() => settingsStore.houseRules)
 
 const thresholdRows = computed(() => {
   const rows: Array<{ range: string; points: number; cleanOnly: boolean }> = []
@@ -44,9 +46,20 @@ const CARD_POINT_ROWS = [
 
 <template>
   <div class="mx-auto max-w-2xl space-y-8">
-    <h1 class="font-display text-2xl text-walnut">
-      {{ t('rules.title') }}
-    </h1>
+    <div>
+      <h1 class="font-display text-2xl text-walnut">
+        {{ t('rules.title') }}
+      </h1>
+      <p class="mt-1 text-sm text-clay">
+        {{ t('rules.houseRulesNote') }}
+        <RouterLink
+          to="/settings"
+          class="font-medium text-wine hover:underline"
+        >
+          {{ t('rules.houseRulesLink') }}
+        </RouterLink>
+      </p>
+    </div>
 
     <section>
       <h2 class="mb-3 font-display text-lg text-walnut">
@@ -148,17 +161,20 @@ const CARD_POINT_ROWS = [
                 {{ t(`game.canastaType.${type}`) }}
               </td>
               <td class="px-4 py-2.5 text-right tabular-nums text-walnut">
-                {{ CANASTA_VALUES[type] }}
+                {{ n(rules.canastaValues[type]) }}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
       <p class="mt-3 text-sm text-clay">
-        {{ t('rules.canastonBody') }}
+        {{ t('rules.canastasAfterClosing') }}
+      </p>
+      <p class="mt-3 text-sm text-clay">
+        {{ t('rules.canastonBody', { count: rules.canastonThreshold, bonus: n(rules.canastonBonus) }) }}
       </p>
       <p class="text-sm text-clay">
-        {{ t('rules.superCanastonBody') }}
+        {{ t('rules.superCanastonBody', { count: rules.superCanastonThreshold, bonus: n(rules.superCanastonBonus) }) }}
       </p>
     </section>
 
@@ -188,6 +204,15 @@ const CARD_POINT_ROWS = [
 
     <section>
       <h2 class="mb-1 font-display text-lg text-walnut">
+        {{ t('rules.turnTitle') }}
+      </h2>
+      <p class="text-sm text-clay">
+        {{ t('rules.turnBody') }}
+      </p>
+    </section>
+
+    <section>
+      <h2 class="mb-1 font-display text-lg text-walnut">
         {{ t('rules.goingOutTitle') }}
       </h2>
       <p class="text-sm text-clay">
@@ -210,6 +235,24 @@ const CARD_POINT_ROWS = [
       </h2>
       <p class="text-sm text-clay">
         {{ t('rules.pilonTriadoBody') }}
+      </p>
+    </section>
+
+    <section>
+      <h2 class="mb-1 font-display text-lg text-walnut">
+        {{ t('rules.monoObligaTitle') }}
+      </h2>
+      <p class="text-sm text-clay">
+        {{ t('rules.monoObligaBody') }}
+      </p>
+    </section>
+
+    <section>
+      <h2 class="mb-1 font-display text-lg text-walnut">
+        {{ t('rules.penaltiesTitle') }}
+      </h2>
+      <p class="text-sm text-clay">
+        {{ t('rules.penaltiesBody', { points: rules.penaltyValue }) }}
       </p>
     </section>
   </div>

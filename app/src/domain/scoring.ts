@@ -1,13 +1,9 @@
 import {
   ALL_CANASTA_TYPES,
-  CANASTA_VALUES,
-  CANASTON_BONUS,
-  CANASTON_THRESHOLD,
   CLEAN_CANASTA_TYPES,
   DIRTY_CANASTA_TYPES,
   BLACK_THREES_BONUS_POINTS,
   EXACT_CUT_BONUS,
-  GAME_TARGET,
   GOING_OUT_POINTS,
   JOKER_CANASTA_DEUCE_COUNT,
   JOKER_CANASTA_JOKER_COUNT,
@@ -16,15 +12,22 @@ import {
   MELD_THRESHOLD_DEFAULT,
   MIN_NATURAL_CARDS_PER_CLEAN_CANASTA,
   MIN_NATURAL_CARDS_PER_DIRTY_CANASTA,
-  MISDEAL_PENALTY,
-  SUPER_CANASTON_BONUS,
-  SUPER_CANASTON_THRESHOLD,
   teamsForGame,
   totalAces,
   totalDeuces,
   totalJokers,
 } from './constants'
-import type { CanastaType, Game, PlayerCount, PlayerId, Round, Session, TeamId, TeamRoundEntry } from './types'
+import type {
+  CanastaType,
+  Game,
+  HouseRules,
+  PlayerCount,
+  PlayerId,
+  Round,
+  Session,
+  TeamId,
+  TeamRoundEntry,
+} from './types'
 
 export type RoundViolationCode =
   | 'invalidIda'
@@ -43,6 +46,8 @@ export interface RoundViolation {
 export interface RoundScoreBreakdown {
   cut: number
   misdeal: number
+  /** Bad melds + table talk (the misdeal keeps its own line). */
+  penalties: number
   honors: number
   canastas: number
   countBonus: number
@@ -88,9 +93,9 @@ function honorsValue(count: number, entry: TeamRoundEntry): number {
   return honorsValueForKind(count, honorsClosedKind(entry))
 }
 
-function countBonus(total: number): number {
-  if (total >= SUPER_CANASTON_THRESHOLD) return SUPER_CANASTON_BONUS
-  if (total >= CANASTON_THRESHOLD) return CANASTON_BONUS
+function countBonus(total: number, rules: HouseRules): number {
+  if (total >= rules.superCanastonThreshold) return rules.superCanastonBonus
+  if (total >= rules.canastonThreshold) return rules.canastonBonus
   return 0
 }
 
@@ -98,18 +103,20 @@ function isValidIda(entry: TeamRoundEntry): boolean {
   return hasClean(entry) && hasDirty(entry)
 }
 
-export function scoreRound(entry: TeamRoundEntry): RoundScoreBreakdown {
+export function scoreRound(entry: TeamRoundEntry, rules: HouseRules): RoundScoreBreakdown {
   const violations: RoundViolation[] = []
   const total = totalCanastas(entry)
+  const values = rules.canastaValues
 
   const cut = entry.exactCut ? EXACT_CUT_BONUS : 0
-  const misdeal = entry.misdeal ? MISDEAL_PENALTY : 0
+  const misdeal = entry.misdeal ? -rules.penaltyValue : 0
+  const penalties = -(entry.badMelds + entry.tableTalk) * rules.penaltyValue
   const honors = honorsValue(entry.honors, entry)
   const canastas = ALL_CANASTA_TYPES.reduce(
-    (sum, t) => sum + entry.canastas[t] * CANASTA_VALUES[t] + entry.canastasEnMano[t] * CANASTA_VALUES[t] * 2,
+    (sum, t) => sum + entry.canastas[t] * values[t] + entry.canastasEnMano[t] * values[t] * 2,
     0,
   )
-  const bonus = countBonus(total)
+  const bonus = countBonus(total, rules)
 
   let goingOut = 0
   if (entry.wentOut && isValidIda(entry)) {
@@ -122,11 +129,12 @@ export function scoreRound(entry: TeamRoundEntry): RoundScoreBreakdown {
   const melded = total > 0 ? entry.meldedPoints : -entry.meldedPoints
   const hand = -Object.values(entry.handPoints).reduce((sum, p) => sum + p, 0)
 
-  const roundTotal = cut + misdeal + honors + canastas + bonus + goingOut + melded + hand
+  const roundTotal = cut + misdeal + penalties + honors + canastas + bonus + goingOut + melded + hand
 
   return {
     cut,
     misdeal,
+    penalties,
     honors,
     canastas,
     countBonus: bonus,
@@ -147,13 +155,18 @@ export interface RoundValidation {
  * Cross-team checks: combines each team's scoreRound violations with the
  * round-level checks that require comparing both entries at once.
  */
-export function validateRound(round: Round, playerCount: PlayerCount, teams: TeamId[] = ['A', 'B']): RoundValidation {
+export function validateRound(
+  round: Round,
+  playerCount: PlayerCount,
+  rules: HouseRules,
+  teams: TeamId[] = ['A', 'B'],
+): RoundValidation {
   const violations: RoundViolation[] = []
   const maxHonors = MAX_HONORS[playerCount]
 
   for (const team of teams) {
     const entry = round.entries[team]
-    const breakdown = scoreRound(entry)
+    const breakdown = scoreRound(entry, rules)
     for (const v of breakdown.violations) violations.push({ ...v, team })
     if (entry.honors > maxHonors) violations.push({ team, code: 'honorsOverMax' })
   }
@@ -222,12 +235,12 @@ export function checkCardSupply(round: Round, playerCount: PlayerCount, teams: T
   return warnings
 }
 
-export function gameTotals(game: Game): Record<TeamId, number> {
+export function gameTotals(game: Game, rules: HouseRules): Record<TeamId, number> {
   const teams = teamsForGame(game.partnership)
   const totals: Record<TeamId, number> = { A: 0, B: 0, C: 0 }
   for (const round of game.rounds) {
     for (const team of teams) {
-      totals[team] += scoreRound(round.entries[team]).total
+      totals[team] += scoreRound(round.entries[team], rules).total
     }
   }
   return totals
@@ -238,11 +251,11 @@ export interface GameResult {
   winner?: TeamId
 }
 
-export function gameResult(game: Game): GameResult {
+export function gameResult(game: Game, rules: HouseRules): GameResult {
   const teams = teamsForGame(game.partnership)
-  const totals = gameTotals(game)
+  const totals = gameTotals(game, rules)
 
-  const aboveTarget = teams.filter((t) => totals[t] >= GAME_TARGET)
+  const aboveTarget = teams.filter((t) => totals[t] >= rules.gameTarget)
 
   if (aboveTarget.length === 0) return { finished: false }
 
@@ -262,16 +275,49 @@ export function meldThreshold(cumulative: number): { points: number; cleanOnly: 
   return { points: MELD_THRESHOLD_DEFAULT, cleanOnly: false }
 }
 
+/**
+ * A game's score rounded to the nearest thousand, in thousands (15,680 → 16,
+ * 14,300 → 14). Halves round up.
+ */
+export function roundToThousands(points: number): number {
+  return Math.round(points / 1_000)
+}
+
+/**
+ * What each team contributes to its players' session tallies for one game.
+ * `roundedThousands`: the team's rounded score minus each opponent's rounded
+ * score, summed (2 teams: 16 vs 14 → +2 / −2; always zero-sum).
+ * `rawPoints`: the team's raw game total.
+ */
+export function gameTallyPoints(game: Game, rules: HouseRules): Record<TeamId, number> {
+  const teams = teamsForGame(game.partnership)
+  const totals = gameTotals(game, rules)
+  const points: Record<TeamId, number> = { A: 0, B: 0, C: 0 }
+
+  if (rules.sessionScoring === 'rawPoints') {
+    for (const team of teams) points[team] = totals[team]
+    return points
+  }
+
+  for (const team of teams) {
+    const own = roundToThousands(totals[team])
+    points[team] = teams
+      .filter((other) => other !== team)
+      .reduce((sum, other) => sum + own - roundToThousands(totals[other]), 0)
+  }
+  return points
+}
+
 export function sessionTallies(session: Session): Record<PlayerId, number> {
+  const { rules } = session
   const tallies: Record<PlayerId, number> = {}
   for (const player of session.players) tallies[player.id] = 0
 
   for (const game of session.games) {
-    const teams = teamsForGame(game.partnership)
-    const totals = gameTotals(game)
-    for (const team of teams) {
+    const points = gameTallyPoints(game, rules)
+    for (const team of teamsForGame(game.partnership)) {
       for (const playerId of game.partnership[team]) {
-        tallies[playerId] = (tallies[playerId] ?? 0) + totals[team]
+        tallies[playerId] = (tallies[playerId] ?? 0) + points[team]
       }
     }
   }

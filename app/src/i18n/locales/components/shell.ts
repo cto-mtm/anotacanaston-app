@@ -1,6 +1,7 @@
 const es = {
   navSessions: 'Partidas',
   navRules: 'Reglas',
+  navSettings: 'Ajustes',
   navAbout: 'Acerca de',
   navAccount: 'Cuenta',
   offlineBadge: 'Sin conexión',
@@ -11,6 +12,7 @@ const es = {
 const en: typeof es = {
   navSessions: 'Sessions',
   navRules: 'Rules',
+  navSettings: 'Settings',
   navAbout: 'About',
   navAccount: 'Account',
   offlineBadge: 'Offline',

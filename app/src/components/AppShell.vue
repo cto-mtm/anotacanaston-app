@@ -57,6 +57,12 @@ watch(menuOpen, (open) => {
             {{ t('shell.navRules') }}
           </RouterLink>
           <RouterLink
+            to="/settings"
+            class="transition-colors hover:text-wine"
+          >
+            {{ t('shell.navSettings') }}
+          </RouterLink>
+          <RouterLink
             to="/about"
             class="transition-colors hover:text-wine"
           >
@@ -186,8 +192,30 @@ watch(menuOpen, (open) => {
           </RouterLink>
 
           <RouterLink
-            to="/about"
+            to="/settings"
             class="nav-stagger-4 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+          >
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose/30 text-walnut">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="h-5 w-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+                />
+              </svg>
+            </span>
+            <span class="text-lg font-medium text-walnut">{{ t('shell.navSettings') }}</span>
+          </RouterLink>
+
+          <RouterLink
+            to="/about"
+            class="nav-stagger-5 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sage-light text-sage">
               <svg
@@ -209,7 +237,7 @@ watch(menuOpen, (open) => {
 
           <RouterLink
             to="/welcome"
-            class="nav-stagger-5 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+            class="nav-stagger-6 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
               <svg

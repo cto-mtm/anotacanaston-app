@@ -5,8 +5,6 @@ const es = {
   continueOffline: 'Continuar sin conexión',
   cloudTitle: 'Guarda en la nube',
   cloudBody: 'Inicia sesión para respaldar tus partidas y acceder a ellas desde cualquier dispositivo.',
-  signIn: 'Iniciar sesión',
-  comingSoon: 'Próximamente',
 }
 
 const en: typeof es = {
@@ -16,8 +14,6 @@ const en: typeof es = {
   continueOffline: 'Continue offline',
   cloudTitle: 'Save to the cloud',
   cloudBody: 'Sign in to back up your sessions and access them from any device.',
-  signIn: 'Sign in',
-  comingSoon: 'Coming soon',
 }
 
 export default { es, en }

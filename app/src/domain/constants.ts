@@ -1,15 +1,7 @@
 import type { CanastaType, PlayerCount, TeamId } from './types'
 
-export const CANASTA_VALUES: Record<CanastaType, number> = {
-  clean: 500,
-  dirty: 300,
-  cleanAce: 1000,
-  dirtyAce: 500,
-  cleanDeuce: 2000,
-  dirtyDeuce: 3000,
-  joker: 5000,
-  monkey: 4000,
-}
+// Canasta values, Canastón thresholds, penalties and the game target vary
+// between groups — they live per session in rules.ts, not here.
 
 /** Canasta types that count as "clean" for the honors matrix and la ida validity. */
 export const CLEAN_CANASTA_TYPES: readonly CanastaType[] = [
@@ -17,7 +9,6 @@ export const CLEAN_CANASTA_TYPES: readonly CanastaType[] = [
   'cleanAce',
   'cleanDeuce',
   'joker',
-  'monkey',
 ]
 
 /** Canasta types that count as "dirty" for the honors matrix and la ida validity. */
@@ -28,18 +19,10 @@ export const ALL_CANASTA_TYPES: readonly CanastaType[] = [
   ...DIRTY_CANASTA_TYPES,
 ]
 
-export const GAME_TARGET = 15_000
-
 export const EXACT_CUT_BONUS = 500
-export const MISDEAL_PENALTY = -500
 
 export const GOING_OUT_POINTS = 300
 export const BLACK_THREES_BONUS_POINTS = 300
-
-export const CANASTON_THRESHOLD = 9
-export const CANASTON_BONUS = 3_000
-export const SUPER_CANASTON_THRESHOLD = 12
-export const SUPER_CANASTON_BONUS = 5_000
 
 /** Standard decks used per session, by player count (per house rules). */
 export const DECKS_PER_SESSION: Record<PlayerCount, number> = { 4: 3, 6: 4 }
