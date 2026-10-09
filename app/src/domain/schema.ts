@@ -82,6 +82,8 @@ export const playerSchema = z.object({
 export const sessionSchema = z.object({
   id: z.string().min(1),
   date: z.string().min(1),
+  // Sessions saved before this field existed sort as oldest among same-date ones.
+  createdAt: z.number().default(0),
   playerCount: z.union([z.literal(4), z.literal(6)]),
   sixPlayerFormat: z.enum(['2x3', '3x2']).optional(),
   players: z.array(playerSchema),

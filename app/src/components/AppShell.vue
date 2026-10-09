@@ -4,7 +4,9 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '../stores/account'
 import LocaleSwitcher from './LocaleSwitcher.vue'
-import logo from '../assets/images/logo-color.svg'
+import logo from '../assets/images/logo-color-256.webp'
+import CardStackIcon from './icons/CardStackIcon.vue'
+import ScorePadIcon from './icons/ScorePadIcon.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -28,17 +30,22 @@ watch(menuOpen, (open) => {
 
 <template>
   <div class="flex min-h-screen flex-col">
-    <header class="sticky top-0 z-20 flex items-center justify-between border-b border-rose/40 bg-ivory/90 px-5 pt-4 pb-3 backdrop-blur">
+    <header class="sticky top-0 z-20 flex items-center justify-between bg-ivory/90 px-5 pt-4 pb-5 backdrop-blur">
+      <!-- The logo's basket weave as the header underline (main.css .weave-band). -->
+      <div
+        class="weave-band pointer-events-none absolute inset-x-0 bottom-0"
+        aria-hidden="true"
+      />
       <RouterLink
         to="/"
         class="flex items-center gap-2"
       >
         <img
           :src="logo"
-          alt="Anota Canaston"
+          alt=""
           class="h-9 w-9"
         >
-        <span class="hidden font-display text-lg text-walnut sm:inline">Anota Canaston</span>
+        <span class="font-display text-lg text-walnut">Anota Canaston</span>
       </RouterLink>
 
       <!-- Desktop nav -->
@@ -49,6 +56,12 @@ watch(menuOpen, (open) => {
             class="transition-colors hover:text-wine"
           >
             {{ t('shell.navSessions') }}
+          </RouterLink>
+          <RouterLink
+            to="/stats"
+            class="transition-colors hover:text-wine"
+          >
+            {{ t('shell.navStats') }}
           </RouterLink>
           <RouterLink
             to="/rules"
@@ -152,26 +165,24 @@ watch(menuOpen, (open) => {
             class="nav-stagger-2 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                class="h-5 w-5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
-                />
-              </svg>
+              <CardStackIcon class="h-5 w-5" />
             </span>
             <span class="text-lg font-medium text-walnut">{{ t('shell.navSessions') }}</span>
           </RouterLink>
 
           <RouterLink
-            to="/rules"
+            to="/stats"
             class="nav-stagger-3 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+          >
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sage-light text-sage">
+              <ScorePadIcon class="h-5 w-5" />
+            </span>
+            <span class="text-lg font-medium text-walnut">{{ t('shell.navStats') }}</span>
+          </RouterLink>
+
+          <RouterLink
+            to="/rules"
+            class="nav-stagger-4 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-light text-gold">
               <svg
@@ -193,7 +204,7 @@ watch(menuOpen, (open) => {
 
           <RouterLink
             to="/settings"
-            class="nav-stagger-4 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+            class="nav-stagger-5 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose/30 text-walnut">
               <svg
@@ -215,7 +226,7 @@ watch(menuOpen, (open) => {
 
           <RouterLink
             to="/about"
-            class="nav-stagger-5 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+            class="nav-stagger-6 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sage-light text-sage">
               <svg
@@ -237,7 +248,7 @@ watch(menuOpen, (open) => {
 
           <RouterLink
             to="/welcome"
-            class="nav-stagger-6 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+            class="nav-stagger-7 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
               <svg

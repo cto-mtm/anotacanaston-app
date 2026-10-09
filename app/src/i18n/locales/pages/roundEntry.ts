@@ -27,7 +27,7 @@ const es = {
   },
   overrideWarning: 'Hay advertencias en esta mano. ¿Guardar igual?',
   saveAnyway: 'Guardar igual',
-  cardSupplyTitle: 'Revisá las canastas: esto no parece posible con el mazo',
+  cardSupplyTitle: 'Revisa las canastas: esto no parece posible con el mazo',
   cardSupplyWarnings: {
     aceSupplyExceeded: 'Hacen falta más ases de los que hay en el mazo para esa cantidad de canastones de ases.',
     bothAceVariantsSameTeam: 'Ese equipo tiene un canastón de ases limpio y uno sucio a la vez: es muy poco probable con los ases disponibles.',

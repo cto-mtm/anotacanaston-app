@@ -72,7 +72,10 @@ export interface Game {
 
 export interface Session {
   id: string
+  /** The game-night date the players picked (YYYY-MM-DD). */
   date: string
+  /** When the session was created (ms) — breaks ties between same-date sessions in lists. */
+  createdAt: number
   playerCount: PlayerCount
   sixPlayerFormat?: SixPlayerFormat
   /** Clockwise seat order. */

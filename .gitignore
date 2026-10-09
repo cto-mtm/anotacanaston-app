@@ -14,6 +14,10 @@ node_modules/
 .env
 .env.*
 !.env.example
+# Non-secret production config for Cloud Functions (Stripe product id).
+!firebase/functions/.env.anotacanaston-app
+# Emulator-only secrets (Firebase functions).
+.secret.local
 
 .DS_Store
 

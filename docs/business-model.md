@@ -42,7 +42,7 @@ vos"). The paying features add *convenience and memory*, not core function.
 
 ---
 
-### 💎 Club — $3.99/mo · $34.99/yr
+### 💎 Club — "Canastón Premium" on Stripe, $2.99/mo (live price is read from Stripe; yearly plan not created yet)
 
 For the regular player who wants her history and stats preserved.
 

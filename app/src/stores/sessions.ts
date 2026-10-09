@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { z } from 'zod'
 import { sessionSchema } from '../domain/schema'
 import { gameResult, gameTotals, meldThreshold, sessionTallies, sessionWinner } from '../domain/scoring'
 import { buildFourPlayerSchedule, buildSixPlayerGames2x3, buildSixPlayerGames3x2, type GameSkeleton } from '../domain/rotation'
 import { teamsForGame } from '../domain/constants'
 import { cloneRules, DEFAULT_RULES } from '../domain/rules'
+import { toPlain } from '../lib/cloud'
 import type { Game, HouseRules, Player, PlayerId, Session, SixPlayerFormat, TeamId, TeamRoundEntry } from '../domain/types'
 
 export interface CreateFourPlayerSessionInput {
@@ -30,24 +31,49 @@ export interface CreateSixPlayerSessionInput {
 
 export type CreateSessionInput = CreateFourPlayerSessionInput | CreateSixPlayerSessionInput
 
+/**
+ * Where a Club member's writes go. Injected by lib/sync.ts so this store never
+ * imports Firebase. Fire-and-forget: Firestore's offline cache applies writes
+ * locally at once and the live listener feeds them back via setCloudSessions.
+ */
+export interface CloudWriter {
+  save(session: Session): void
+  remove(sessionId: string): void
+}
+
+/**
+ * The games. Two slots, one active (docs/plans/membership-and-storage.md §2):
+ *  - localSessions: free / offline / lapsed — persisted to localStorage
+ *  - cloudSessions: Club members — in memory, fed by Firestore's listener
+ * `sessions` is whichever is active; every action writes through `commit`.
+ */
 export const useSessionsStore = defineStore(
   'sessions',
   () => {
-    const sessions = ref<Session[]>([])
-    // Per-session last-modified stamp (ms). Powers last-write-wins cloud sync;
-    // bumped on every local mutation. Sessions created before this existed
-    // simply have no entry and are treated as oldest during a merge.
-    const sessionStamps = ref<Record<string, number>>({})
-    // Session id → when it was deleted (ms). Synced as cloud tombstones so a
-    // delete wins over older copies on other devices instead of being undone.
-    const deletedStamps = ref<Record<string, number>>({})
+    const localSessions = ref<Session[]>([])
+    const cloudSessions = ref<Session[]>([])
+    const cloudWriter = shallowRef<CloudWriter | null>(null)
 
-    function touch(sessionId: string) {
-      sessionStamps.value[sessionId] = Date.now()
-    }
+    const usingCloud = computed(() => cloudWriter.value !== null)
+    const sessions = computed(() => (usingCloud.value ? cloudSessions.value : localSessions.value))
+    /**
+     * For lists: newest game night first. Needed because the cloud slot comes
+     * from Firestore in document-id (random UUID) order, not creation order.
+     */
+    const sessionsNewestFirst = computed(() =>
+      [...sessions.value].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+    )
 
     function findSession(sessionId: string): Session | undefined {
       return sessions.value.find((s) => s.id === sessionId)
+    }
+
+    /**
+     * Persists a session after an in-place change. Local: the persistence
+     * plugin saves the mutated state. Cloud: hand a plain copy to Firestore.
+     */
+    function commit(session: Session) {
+      cloudWriter.value?.save(toPlain(session))
     }
 
     function createSession(input: CreateSessionInput): Session {
@@ -78,6 +104,7 @@ export const useSessionsStore = defineStore(
       const session: Session = {
         id: crypto.randomUUID(),
         date: input.date,
+        createdAt: Date.now(),
         playerCount: input.playerCount,
         sixPlayerFormat: input.playerCount === 6 ? input.sixPlayerFormat : undefined,
         players: input.players,
@@ -90,15 +117,16 @@ export const useSessionsStore = defineStore(
       }
 
       sessions.value.push(session)
-      touch(session.id)
+      commit(session)
       return session
     }
 
     function addRound(sessionId: string, gameIndex: number, entries: Record<TeamId, TeamRoundEntry>) {
-      const game = findSession(sessionId)?.games[gameIndex]
-      if (!game) throw new Error('game not found')
+      const session = findSession(sessionId)
+      const game = session?.games[gameIndex]
+      if (!session || !game) throw new Error('game not found')
       game.rounds.push({ entries })
-      touch(sessionId)
+      commit(session)
     }
 
     function updateRound(
@@ -107,18 +135,19 @@ export const useSessionsStore = defineStore(
       roundIndex: number,
       entries: Record<TeamId, TeamRoundEntry>,
     ) {
-      const game = findSession(sessionId)?.games[gameIndex]
-      const round = game?.rounds[roundIndex]
-      if (!game || !round) throw new Error('round not found')
+      const session = findSession(sessionId)
+      const round = session?.games[gameIndex]?.rounds[roundIndex]
+      if (!session || !round) throw new Error('round not found')
       round.entries = entries
-      touch(sessionId)
+      commit(session)
     }
 
     function deleteRound(sessionId: string, gameIndex: number, roundIndex: number) {
-      const game = findSession(sessionId)?.games[gameIndex]
-      if (!game) throw new Error('game not found')
+      const session = findSession(sessionId)
+      const game = session?.games[gameIndex]
+      if (!session || !game) throw new Error('game not found')
       game.rounds.splice(roundIndex, 1)
-      touch(sessionId)
+      commit(session)
     }
 
     /** Auto-finishes the session once every planned game has a result. */
@@ -133,32 +162,42 @@ export const useSessionsStore = defineStore(
 
     function finishSession(sessionId: string) {
       const session = findSession(sessionId)
-      if (session) {
-        session.status = 'finished'
-        touch(sessionId)
-      }
+      if (!session) return
+      session.status = 'finished'
+      commit(session)
     }
 
     function deleteSession(sessionId: string) {
       const index = sessions.value.findIndex((s) => s.id === sessionId)
       if (index !== -1) sessions.value.splice(index, 1)
-      delete sessionStamps.value[sessionId]
-      deletedStamps.value[sessionId] = Date.now()
+      cloudWriter.value?.remove(sessionId)
     }
 
-    /**
-     * Replaces the local session set with a merged one (from cloud sync) and
-     * stamps every adopted session `now` so subsequent local edits win. Called
-     * only by the cloud-sync layer after reconciling local + remote.
-     */
-    function adoptMerged(merged: Session[], tombstones: Record<string, number>) {
-      sessions.value = merged
-      const now = Date.now()
-      const next: Record<string, number> = {}
-      for (const s of merged) next[s.id] = sessionStamps.value[s.id] ?? now
-      sessionStamps.value = next
-      deletedStamps.value = tombstones
+    // ── Backend switching (called only by lib/sync.ts) ────────────────
+
+    /** Club member: reads come from the cloud slot, writes go to `writer`. */
+    function useCloud(writer: CloudWriter) {
+      cloudSessions.value = []
+      cloudWriter.value = writer
     }
+
+    /** Back to the device's own games (sign-out, lapse). */
+    function useLocal() {
+      cloudWriter.value = null
+      cloudSessions.value = []
+    }
+
+    /** The Firestore listener's latest view of the member's games. */
+    function setCloudSessions(next: Session[]) {
+      cloudSessions.value = next
+    }
+
+    /** Replaces the device's own games (after a copy-down, or emptied after an upload). */
+    function setLocalSessions(next: Session[]) {
+      localSessions.value = next
+    }
+
+    // ── Engine-backed reads ───────────────────────────────────────────
 
     function getSessionRules(sessionId: string): HouseRules {
       const session = findSession(sessionId)
@@ -200,9 +239,12 @@ export const useSessionsStore = defineStore(
     }
 
     return {
+      localSessions,
+      cloudSessions,
+      cloudWriter,
+      usingCloud,
       sessions,
-      sessionStamps,
-      deletedStamps,
+      sessionsNewestFirst,
       findSession,
       createSession,
       addRound,
@@ -211,7 +253,10 @@ export const useSessionsStore = defineStore(
       advanceGame,
       finishSession,
       deleteSession,
-      adoptMerged,
+      useCloud,
+      useLocal,
+      setCloudSessions,
+      setLocalSessions,
       getSessionRules,
       getGameTotals,
       getGameResult,
@@ -223,12 +268,18 @@ export const useSessionsStore = defineStore(
   },
   {
     persist: {
-      version: 1,
+      version: 2,
+      // Only the device's own games — a member's cloud games stay in Firestore's cache.
+      pick: ['localSessions'],
       schema: z.object({
-        sessions: z.array(sessionSchema),
-        sessionStamps: z.record(z.string(), z.number()),
-        deletedStamps: z.record(z.string(), z.number()),
+        localSessions: z.array(sessionSchema),
       }),
+      // v1 kept the games under `sessions` (plus sync stamps, now dropped).
+      // sessionSchema defaults the `createdAt` those sessions lack.
+      migrate: (raw) => {
+        const v1 = (raw ?? {}) as { sessions?: unknown; localSessions?: unknown }
+        return { localSessions: v1.localSessions ?? v1.sessions ?? [] }
+      },
     },
   },
 )

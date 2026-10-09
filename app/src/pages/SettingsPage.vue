@@ -1,18 +1,56 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../stores/settings'
+import { useAccountStore } from '../stores/account'
+import { useMembershipStore } from '../stores/membership'
+import { useClubModal } from '../composables/useClubModal'
+import { useAccountActions } from '../composables/useAccountActions'
+import { openBillingPortal } from '../lib/billing'
 import { ALL_CANASTA_TYPES } from '../domain/constants'
 import { cloneRules, DEFAULT_RULES } from '../domain/rules'
 import type { CanastaType, HouseRules, SessionScoringMethod } from '../domain/types'
 import BaseButton from '../components/BaseButton.vue'
 
-const { t } = useI18n()
+const { t, d } = useI18n()
 const settingsStore = useSettingsStore()
+const account = useAccountStore()
+const membership = useMembershipStore()
+const { open: openClub } = useClubModal()
+const { busy: accountBusy, error: accountError, signOut, deleteAccount } = useAccountActions()
+
+const billingBusy = ref(false)
+const billingError = ref<string | null>(null)
+
+async function manageSubscription() {
+  billingBusy.value = true
+  billingError.value = null
+  try {
+    await openBillingPortal() // redirects away on success
+  } catch {
+    billingError.value = t('account.manageBillingError')
+    billingBusy.value = false
+  }
+}
+
+const clubStatusText = computed(() => {
+  if (membership.status === 'checking') return t('club.settingsChecking')
+  return membership.capabilities.canSync ? t('club.settingsActive') : t('club.settingsInactive')
+})
 
 // Edit a draft so half-typed values never leak into new sessions.
 const draft = ref<HouseRules>(cloneRules(settingsStore.houseRules))
 const saved = ref(false)
+const dirty = ref(false)
+
+// A member's rules can arrive from the cloud after this page opened — take
+// them, unless the user is mid-edit.
+watch(
+  () => settingsStore.houseRules,
+  (rules) => {
+    if (!dirty.value) draft.value = cloneRules(rules)
+  },
+)
 
 type NumericRuleKey = Exclude<keyof HouseRules, 'canastaValues' | 'sessionScoring'>
 
@@ -35,19 +73,24 @@ function numberFrom(event: Event): number {
   return Number.isFinite(value) && value >= 0 ? Math.trunc(value) : 0
 }
 
+function edited() {
+  saved.value = false
+  dirty.value = true
+}
+
 function setCanastaValue(type: CanastaType, event: Event) {
   draft.value.canastaValues[type] = numberFrom(event)
-  saved.value = false
+  edited()
 }
 
 function setField(key: NumericRuleKey, event: Event) {
   draft.value[key] = numberFrom(event)
-  saved.value = false
+  edited()
 }
 
 function setScoring(method: SessionScoringMethod) {
   draft.value.sessionScoring = method
-  saved.value = false
+  edited()
 }
 
 const thresholdsValid = computed(
@@ -61,11 +104,12 @@ function save() {
   if (!thresholdsValid.value) return
   settingsStore.setHouseRules(draft.value)
   saved.value = true
+  dirty.value = false
 }
 
 function restoreDefaults() {
   draft.value = cloneRules(DEFAULT_RULES)
-  saved.value = false
+  edited()
 }
 </script>
 
@@ -202,5 +246,68 @@ function restoreDefaults() {
         </BaseButton>
       </div>
     </div>
+
+    <section class="rounded-2xl border border-gold/30 bg-gold-light p-4">
+      <h2 class="font-display text-lg text-walnut">
+        {{ t('club.settingsTitle') }}
+      </h2>
+      <p class="mt-1 text-sm text-clay">
+        {{ clubStatusText }}
+      </p>
+      <p
+        v-if="membership.memberSince || membership.renewsAt || membership.endsAt"
+        class="mt-1 text-xs text-clay"
+      >
+        <span v-if="membership.memberSince">{{ t('club.memberSince', { date: d(new Date(membership.memberSince), 'short') }) }}</span>
+        <span v-if="membership.capabilities.canSync && membership.renewsAt"> · {{ t('club.renewsOn', { date: d(new Date(membership.renewsAt), 'short') }) }}</span>
+        <span v-if="membership.capabilities.canSync && membership.endsAt"> · {{ t('club.endsOn', { date: d(new Date(membership.endsAt), 'short') }) }}</span>
+      </p>
+      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <BaseButton
+          v-if="membership.capabilities.canSubscribe"
+          @click="openClub"
+        >
+          {{ t('club.seeBenefits') }}
+        </BaseButton>
+        <BaseButton
+          v-if="membership.capabilities.canManageBilling"
+          :variant="membership.capabilities.canSubscribe ? 'secondary' : 'primary'"
+          :disabled="billingBusy"
+          @click="manageSubscription"
+        >
+          {{ t('account.manageBilling') }}
+        </BaseButton>
+        <button
+          v-if="account.isSignedIn"
+          type="button"
+          class="min-h-11 text-sm font-medium text-clay transition-colors hover:text-walnut hover:underline"
+          :disabled="accountBusy"
+          @click="signOut"
+        >
+          {{ t('account.signOut') }}
+        </button>
+      </div>
+      <p
+        v-if="accountError || billingError"
+        class="mt-2 text-sm text-wine"
+      >
+        {{ accountError ?? billingError }}
+      </p>
+      <button
+        v-if="account.isSignedIn"
+        type="button"
+        class="mt-4 min-h-11 text-sm font-medium text-wine transition-colors hover:underline"
+        :disabled="accountBusy"
+        @click="deleteAccount"
+      >
+        {{ t('account.deleteAccount') }}
+      </button>
+      <RouterLink
+        to="/privacy"
+        class="mt-2 block text-xs text-clay hover:text-walnut hover:underline"
+      >
+        {{ t('privacy.title') }}
+      </RouterLink>
+    </section>
   </div>
 </template>

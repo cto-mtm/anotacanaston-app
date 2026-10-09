@@ -9,6 +9,11 @@ export interface PersistOptions<T = unknown> {
   schema: ZodType<T>
   /** Upgrades data written by an older schema version to the current shape. */
   migrate?: (raw: unknown, fromVersion: number) => T
+  /**
+   * Persist only these state keys (default: the whole state). Keeps in-memory
+   * state — e.g. a member's cloud sessions — out of localStorage.
+   */
+  pick?: string[]
 }
 
 // Deliberately not tied to S/Store — Pinia's setup-store generics resolve S
@@ -38,31 +43,54 @@ export function createPersistencePlugin() {
     if (!persist) return
 
     const key = storageKey(store.$id, persist.version)
-    const raw = localStorage.getItem(key)
 
-    if (raw !== null) {
+    /** Validates (after `transform`) and hydrates; invalid data is backed up, never lost. */
+    function hydrate(sourceKey: string, raw: string, transform: (data: unknown) => unknown): unknown {
       try {
-        const parsed: unknown = JSON.parse(raw)
-        const result = persist.schema.safeParse(parsed)
+        const result = persist!.schema.safeParse(transform(JSON.parse(raw)))
         if (result.success) {
           // Pinia's $patch generics don't line up with a generic plugin's
           // erased state type — this cast is the intentional boundary.
           store.$patch(result.data as never)
-        } else {
-          localStorage.setItem(`${key}.corrupt`, raw)
-          localStorage.removeItem(key)
+          return result.data
         }
       } catch {
-        localStorage.setItem(`${key}.corrupt`, raw)
-        localStorage.removeItem(key)
+        // fall through to the backup below
+      }
+      localStorage.setItem(`${sourceKey}.corrupt`, raw)
+      localStorage.removeItem(sourceKey)
+      return undefined
+    }
+
+    const raw = localStorage.getItem(key)
+    if (raw !== null) {
+      hydrate(key, raw, (data) => data)
+    } else if (persist.migrate) {
+      // Nothing at the current version: upgrade the newest older version, if any.
+      for (let version = persist.version - 1; version >= 1; version--) {
+        const oldKey = storageKey(store.$id, version)
+        const oldRaw = localStorage.getItem(oldKey)
+        if (oldRaw === null) continue
+        const migrated = hydrate(oldKey, oldRaw, (data) => persist.migrate!(data, version))
+        if (migrated !== undefined) {
+          // Saved under the new key right away — not on the next mutation —
+          // so dropping the old key can't lose anything.
+          localStorage.setItem(key, JSON.stringify(migrated))
+          localStorage.removeItem(oldKey)
+        }
+        break
       }
     }
 
+    const pick = persist.pick
     let timeout: ReturnType<typeof setTimeout> | undefined
     store.$subscribe((_mutation, state) => {
       if (timeout) clearTimeout(timeout)
       timeout = setTimeout(() => {
-        localStorage.setItem(key, JSON.stringify(state))
+        const data = pick
+          ? Object.fromEntries(pick.map((k) => [k, (state as Record<string, unknown>)[k]]))
+          : state
+        localStorage.setItem(key, JSON.stringify(data))
       }, DEBOUNCE_MS)
     })
   }

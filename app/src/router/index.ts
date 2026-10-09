@@ -20,8 +20,10 @@ const router = createRouter({
       name: 'round-edit',
       component: () => import('../pages/RoundEntryPage.vue'),
     },
+    { path: '/stats', name: 'stats', component: () => import('../pages/DashboardPage.vue') },
     { path: '/rules', name: 'rules', component: () => import('../pages/RulesPage.vue') },
     { path: '/settings', name: 'settings', component: () => import('../pages/SettingsPage.vue') },
+    { path: '/privacy', name: 'privacy', component: () => import('../pages/PrivacyPage.vue') },
     { path: '/about', name: 'about', component: () => import('../pages/AboutPage.vue') },
     // Catch-all 404. Required because Firebase Hosting rewrites every URL
     // to index.html — without this, typos render an empty RouterView.
@@ -34,7 +36,7 @@ const router = createRouter({
 // Until the user picks offline vs sign-in on first launch, data-bearing
 // pages redirect to the welcome screen. Reference pages stay reachable
 // so the shell nav works before the choice is made.
-const PRE_CHOICE_ROUTES = new Set(['welcome', 'rules', 'settings', 'about', 'not-found'])
+const PRE_CHOICE_ROUTES = new Set(['welcome', 'rules', 'settings', 'privacy', 'about', 'not-found'])
 
 router.beforeEach((to) => {
   const account = useAccountStore()

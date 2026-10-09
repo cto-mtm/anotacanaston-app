@@ -10,10 +10,10 @@ const es = {
   backToSession: 'Volver a la sesión',
   share: 'Compartir',
   sharing: 'Compartiendo…',
-  shareCta: 'Anotá con Anota Canaston',
-  shareText: '¡Mirá cómo quedó la partida! 🃏',
-  shareDownloaded: 'Imagen guardada — compartila en WhatsApp',
-  shareError: 'No se pudo compartir. Intentá de nuevo.',
+  shareCta: 'Anota tus partidas con Anota Canaston',
+  shareText: '¡Mira cómo quedó la partida! 🃏',
+  shareDownloaded: 'Imagen guardada — compártela en WhatsApp',
+  shareError: 'No se pudo compartir. Intenta de nuevo.',
 }
 
 const en: typeof es = {

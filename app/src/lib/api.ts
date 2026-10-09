@@ -1,8 +1,9 @@
-const FALLBACK_PROD_URL = 'https://us-central1-REPLACE_ME.cloudfunctions.net/api'
+const FALLBACK_PROD_URL = 'https://us-central1-anotacanaston-app.cloudfunctions.net/api'
 const FALLBACK_DEV_URL = 'http://127.0.0.1:5001/demo-app/us-central1/api'
 
+// `||` so an empty VITE_API_URL= line also falls back.
 const BASE_URL =
-  import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? FALLBACK_DEV_URL : FALLBACK_PROD_URL)
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? FALLBACK_DEV_URL : FALLBACK_PROD_URL)
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string }
 

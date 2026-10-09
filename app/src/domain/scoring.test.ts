@@ -462,6 +462,7 @@ describe('sessionTallies / sessionWinner', () => {
       rules,
       id: 's1',
       date: '2026-01-01',
+      createdAt: 0,
       playerCount: 4,
       players: [
         { id: 'p1', name: 'Ana' },

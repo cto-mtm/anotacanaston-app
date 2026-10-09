@@ -1,109 +1,155 @@
 <script setup lang="ts">
-// Account status + Club upgrade banner shown on the home screen.
-//   - offline user  → nothing (they chose the free tier; no nagging here)
-//   - signed in, not entitled → upgrade CTA (web only; native shows a note)
-//   - signed in + entitled → sync-active status + sign out
-import { computed, ref } from 'vue'
+// Account / storage status banner on the home screen, driven by membership:
+//   member / graceful → live save state (+ "update your card" in grace)
+//   lapsed            → "subscription ended, games are on this device"
+//   free / offline    → snoozable Club upsell ("not backed up")
+//   checking          → nothing (never flash a wrong state)
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Capacitor } from '@capacitor/core'
 import { useAccountStore } from '../stores/account'
-import { signOutCloud } from '../lib/auth'
-import { startClubCheckout } from '../lib/billing'
-import BaseButton from './BaseButton.vue'
+import { useMembershipStore } from '../stores/membership'
+import { useSessionsStore } from '../stores/sessions'
+import { useSettingsStore } from '../stores/settings'
+import { useSyncStore } from '../stores/sync'
+import { useClubModal } from '../composables/useClubModal'
+import { useAccountActions } from '../composables/useAccountActions'
+import { openBillingPortal } from '../lib/billing'
 
 const { t } = useI18n()
 const account = useAccountStore()
-
-const isNative = Capacitor.isNativePlatform()
-const starting = ref(false)
-const error = ref(false)
+const membership = useMembershipStore()
+const sessionsStore = useSessionsStore()
+const settingsStore = useSettingsStore()
+const sync = useSyncStore()
+const { open: openClub } = useClubModal()
+const { signOut } = useAccountActions()
 
 const displayName = computed(() => account.user?.displayName ?? account.user?.email ?? '')
+const sessionCount = computed(() => sessionsStore.localSessions.length)
 
-async function upgrade() {
-  if (starting.value) return
-  starting.value = true
-  error.value = false
+const SAVE_STATE_TONE = {
+  saved: 'border-sage/40 bg-sage-light text-sage',
+  saving: 'border-sage/40 bg-sage-light text-sage',
+  offline: 'border-gold/30 bg-gold-light text-gold',
+  error: 'border-wine/30 bg-wine-light text-wine',
+  local: 'border-sage/40 bg-sage-light text-sage',
+} as const
+
+const upsell = computed<'noBackup' | 'offline' | null>(() => {
+  if (!settingsStore.showClubBanner) return null
+  if (membership.status === 'free') return 'noBackup'
+  if (account.mode === 'offline' && sessionCount.value > 0) return 'offline'
+  return null
+})
+
+async function updateCard() {
   try {
-    await startClubCheckout() // redirects away on success
+    await openBillingPortal() // redirects away on success
   } catch {
-    error.value = true
-    starting.value = false
+    alert(t('account.manageBillingError'))
   }
-}
-
-async function signOut() {
-  await signOutCloud()
 }
 </script>
 
 <template>
-  <!-- Signed in + entitled: sync active -->
+  <!-- Member: live save state -->
   <section
-    v-if="account.cloudSyncEnabled"
-    class="mb-6 flex items-center justify-between rounded-2xl border border-sage/40 bg-sage-light px-4 py-3"
+    v-if="membership.capabilities.canSync"
+    class="mb-6 rounded-2xl border px-4 py-3"
+    :class="SAVE_STATE_TONE[sync.saveState]"
   >
-    <div>
-      <p class="text-sm font-medium text-sage">
-        {{ t('account.syncOn') }}
-      </p>
-      <p class="text-xs text-clay">
-        {{ t('account.signedInAs', { name: displayName }) }}
-      </p>
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <p
+          class="text-sm font-medium"
+          role="status"
+        >
+          {{ t(`club.saveState.${sync.saveState}`) }}
+        </p>
+        <p class="text-xs text-clay">
+          {{ t('account.signedInAs', { name: displayName }) }}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="min-h-11 text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
+        @click="signOut"
+      >
+        {{ t('account.signOut') }}
+      </button>
     </div>
+    <div
+      v-if="membership.capabilities.needsCardUpdate"
+      class="mt-3 border-t border-current/20 pt-3"
+    >
+      <p class="text-sm text-walnut">
+        {{ t('club.cardFailed') }}
+      </p>
+      <button
+        v-if="membership.capabilities.canManageBilling"
+        type="button"
+        class="mt-2 min-h-11 rounded-xl bg-wine px-4 py-2 text-sm font-semibold text-white"
+        @click="updateCard"
+      >
+        {{ t('club.updateCard') }}
+      </button>
+    </div>
+  </section>
+
+  <!-- Subscription ended -->
+  <section
+    v-else-if="membership.status === 'lapsed'"
+    class="mb-6 rounded-2xl border border-gold/30 bg-gold-light p-4"
+  >
+    <p class="font-medium text-walnut">
+      {{ t('club.lapsedTitle') }}
+    </p>
+    <p class="mt-0.5 text-sm text-clay">
+      {{ t('club.lapsedBody') }}
+    </p>
     <button
       type="button"
-      class="text-sm font-medium text-wine transition-colors hover:text-walnut hover:underline"
-      @click="signOut"
+      class="mt-3 min-h-11 rounded-xl bg-wine px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-wine/20 transition-all hover:bg-wine/90 active:scale-[0.97]"
+      @click="openClub"
     >
-      {{ t('account.signOut') }}
+      {{ t('club.resubscribe') }}
     </button>
   </section>
 
-  <!-- Signed in, not entitled: upgrade CTA -->
+  <!-- Not backed up: offline device, or signed in without Club -->
   <section
-    v-else-if="account.isSignedIn"
-    class="mb-6 rounded-2xl border border-gold/30 bg-gold-light p-5"
+    v-else-if="upsell"
+    class="mb-6 rounded-2xl border border-gold/30 bg-gold-light p-4"
   >
-    <h2 class="font-display text-lg text-walnut">
-      {{ t('account.upgradeTitle') }}
-    </h2>
-    <p class="mt-1 text-sm text-clay">
-      {{ t('account.upgradeBody') }}
+    <p class="font-medium text-walnut">
+      {{ upsell === 'offline' ? t('club.bannerOffline', sessionCount) : t('club.bannerNoBackup') }}
     </p>
-
-    <div
-      v-if="!isNative"
-      class="mt-4 flex items-center gap-3"
-    >
-      <BaseButton
-        :disabled="starting"
-        @click="upgrade"
+    <p class="mt-0.5 text-sm text-clay">
+      {{ upsell === 'offline' ? t('club.bannerOfflineBody') : t('club.bannerNoBackupBody') }}
+    </p>
+    <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <button
+        type="button"
+        class="min-h-11 rounded-xl bg-wine px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-wine/20 transition-all hover:bg-wine/90 active:scale-[0.97]"
+        @click="openClub"
       >
-        {{ starting ? t('account.upgradeStarting') : t('account.upgradeCta') }}
-      </BaseButton>
-      <span class="text-sm font-medium text-gold">{{ t('account.upgradePrice') }}</span>
+        {{ t('club.seeClub') }}
+      </button>
+      <button
+        type="button"
+        class="min-h-11 text-sm font-medium text-clay transition-colors hover:text-walnut hover:underline"
+        @click="settingsStore.dismissClubBanner"
+      >
+        {{ t('club.notNow') }}
+      </button>
+      <button
+        v-if="account.isSignedIn"
+        type="button"
+        class="ml-auto min-h-11 text-xs font-medium text-clay transition-colors hover:text-walnut hover:underline"
+        @click="signOut"
+      >
+        {{ t('account.signOut') }}
+      </button>
     </div>
-    <p
-      v-else
-      class="mt-4 text-sm text-clay"
-    >
-      {{ t('account.upgradeWebOnly') }}
-    </p>
-
-    <p
-      v-if="error"
-      class="mt-2 text-sm text-wine"
-    >
-      {{ t('account.upgradeError') }}
-    </p>
-
-    <button
-      type="button"
-      class="mt-3 text-xs font-medium text-clay transition-colors hover:text-walnut hover:underline"
-      @click="signOut"
-    >
-      {{ t('account.signOut') }}
-    </button>
   </section>
 </template>

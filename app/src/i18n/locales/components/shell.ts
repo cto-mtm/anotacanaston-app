@@ -1,5 +1,6 @@
 const es = {
   navSessions: 'Partidas',
+  navStats: 'Estadísticas',
   navRules: 'Reglas',
   navSettings: 'Ajustes',
   navAbout: 'Acerca de',
@@ -11,6 +12,7 @@ const es = {
 
 const en: typeof es = {
   navSessions: 'Sessions',
+  navStats: 'Stats',
   navRules: 'Rules',
   navSettings: 'Settings',
   navAbout: 'About',

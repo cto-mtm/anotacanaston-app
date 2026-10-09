@@ -13,9 +13,9 @@
   --color-clay: #7C5E4A;
   --color-sage: #5B7A5E;
   --color-sage-light: #EDF5EE;
-  --color-wine: #8B3A4A;
-  --color-wine-light: #F9EEF0;
-  --color-gold: #B8860B;
+  --color-wine: #9B2A2A; /* the logo's red */
+  --color-wine-light: #F8ECEA;
+  --color-gold: #8A6608;
   --color-gold-light: #FDF6E3;
   --color-rose: #E8C4C4;
   --color-ivory: #FFFEF9;
@@ -23,7 +23,11 @@
 
 body {
   font-family: var(--font-sans);
+  /* Cream plus a faint warm paper grain (1.6 KB tile, average colour
+     unchanged) — card stock, not a flat screen. Cards stay solid on top. */
   background-color: var(--color-cream);
+  background-image: url('../images/paper-grain.png');
+  background-size: 48px 48px;
   color: var(--color-walnut);
 }
 
@@ -34,4 +38,13 @@ body {
 }
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* The logo's basket weave as a thin decorative band (header underline,
+   section dividers). Logo red at low opacity: texture, not decoration noise.
+   Colour is baked into the data URI — keep it in sync with --color-wine. */
+.weave-band {
+  height: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' fill='none' stroke='%239B2A2A' stroke-opacity='.35' stroke-width='1.2' stroke-linecap='round'%3E%3Cpath d='M0 8 8 0M0 0l3 3M5 5l3 3'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
 }

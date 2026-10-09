@@ -15,8 +15,8 @@ const COLOR = {
   linen: '#F5EDE3',
   walnut: '#4A3728',
   clay: '#7C5E4A',
-  wine: '#8B3A4A',
-  gold: '#B8860B',
+  wine: '#9B2A2A',
+  gold: '#8A6608',
   goldLight: '#FDF6E3',
   rose: '#E8C4C4',
 } as const

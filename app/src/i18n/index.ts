@@ -14,6 +14,9 @@ import about from './locales/pages/about'
 import notFound from './locales/pages/notFound'
 import welcome from './locales/pages/welcome'
 import account from './locales/pages/account'
+import club from './locales/pages/club'
+import privacy from './locales/pages/privacy'
+import dashboard from './locales/pages/dashboard'
 
 export const SUPPORTED_LOCALES = ['es', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
@@ -35,6 +38,9 @@ const messages = {
     notFound: notFound.es,
     welcome: welcome.es,
     account: account.es,
+    club: club.es,
+    privacy: privacy.es,
+    dashboard: dashboard.es,
   },
   en: {
     common: common.en,
@@ -52,6 +58,9 @@ const messages = {
     notFound: notFound.en,
     welcome: welcome.en,
     account: account.en,
+    club: club.en,
+    privacy: privacy.en,
+    dashboard: dashboard.en,
   },
 }
 
@@ -75,6 +84,17 @@ const i18n = createI18n({
     },
     en: {
       short: { year: 'numeric', month: 'short', day: 'numeric' },
+    },
+  },
+  // `currency` is overridden per call (n(value, { key: 'currency', currency })).
+  numberFormats: {
+    es: {
+      currency: { style: 'currency', currency: 'USD' },
+      percent: { style: 'percent', maximumFractionDigits: 0 },
+    },
+    en: {
+      currency: { style: 'currency', currency: 'USD' },
+      percent: { style: 'percent', maximumFractionDigits: 0 },
     },
   },
 })

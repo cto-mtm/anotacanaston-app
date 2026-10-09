@@ -37,7 +37,11 @@
   .list-enter-active,
   .list-leave-active,
   .mobile-menu-enter-active,
-  .mobile-menu-leave-active {
+  .mobile-menu-leave-active,
+  .club-modal-enter-active,
+  .club-modal-leave-active,
+  .club-modal-enter-active .club-modal-panel,
+  .club-modal-leave-active .club-modal-panel {
     transition: none !important;
   }
 }
@@ -94,6 +98,29 @@
 }
 .mobile-menu-enter-active .nav-stagger-6 {
   animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 380ms both;
+}
+.mobile-menu-enter-active .nav-stagger-7 {
+  animation: nav-fade-up 350ms cubic-bezier(0.2, 0.8, 0.2, 1) 440ms both;
+}
+
+/* Recipe 7 — Club benefits modal (<Transition name="club-modal">): the
+   backdrop fades while the panel rises from below. Both run the same
+   duration so Vue's end-of-transition detection on the root is exact. */
+.club-modal-enter-active,
+.club-modal-leave-active {
+  transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.club-modal-enter-active .club-modal-panel,
+.club-modal-leave-active .club-modal-panel {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.club-modal-enter-from,
+.club-modal-leave-to {
+  opacity: 0;
+}
+.club-modal-enter-from .club-modal-panel,
+.club-modal-leave-to .club-modal-panel {
+  transform: translateY(32px);
 }
 
 @keyframes nav-fade-up {

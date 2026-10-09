@@ -1,7 +1,7 @@
 const es = {
   title: 'Partidas',
   newSession: 'Nueva partida',
-  empty: 'Todavía no hay partidas. Creá la primera.',
+  empty: 'Todavía no hay partidas. Crea la primera.',
   statusInProgress: 'En curso',
   statusFinished: 'Finalizada',
   playersCount: '{n} jugadores',

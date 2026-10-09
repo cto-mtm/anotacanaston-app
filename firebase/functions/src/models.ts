@@ -15,3 +15,8 @@ export const createCheckoutSchema = z.object({
 })
 
 export type CreateCheckoutBody = z.infer<typeof createCheckoutSchema>
+
+// Body for POST /billing/portal — where Stripe sends the user back to.
+export const createPortalSchema = z.object({
+  returnUrl: z.string().url(),
+})

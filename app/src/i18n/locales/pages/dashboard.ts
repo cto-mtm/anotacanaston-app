@@ -1,0 +1,58 @@
+const es = {
+  title: 'Estadísticas',
+  intro: 'Cómo le va a tu mesa, partida tras partida.',
+  emptyTitle: 'Todavía no hay estadísticas',
+  emptyBody: 'Termina tu primera partida y aquí vas a ver quién lleva la delantera.',
+  newSession: 'Empezar una partida',
+  totals: {
+    sessions: 'Partidas',
+    games: 'Juegos',
+    rounds: 'Manos anotadas',
+  },
+  leaderboardTitle: 'Tabla de posiciones',
+  leaderboardHint: 'Ordenada por partidas ganadas.',
+  rank: 'Puesto {n}',
+  sessionWins: '{count} partida ganada | {count} partidas ganadas',
+  sessionsPlayed: 'de {count} jugada | de {count} jugadas',
+  winRate: 'Juegos ganados: {rate}',
+  winRateLabel: 'Porcentaje de juegos ganados de {name}',
+  streak: 'Racha de {count}',
+  bestStreak: 'Mejor racha: {count}',
+  partnershipsTitle: 'Mejores parejas',
+  partnershipsEmpty: 'Cuando dos jugadoras compartan equipo al menos dos veces, aparecen aquí.',
+  partnershipRecord: '{wins} de {games} juegos ganados juntas',
+  recordTitle: 'Récord',
+  bestGame: 'Mejor puntaje en un juego',
+  bestGameBy: '{names} · {date}',
+}
+
+// Typed against es: a missing or extra key here is a compile error.
+const en: typeof es = {
+  title: 'Stats',
+  intro: 'How your table is doing, game after game.',
+  emptyTitle: 'No stats yet',
+  emptyBody: "Finish your first session and you'll see who's in the lead here.",
+  newSession: 'Start a session',
+  totals: {
+    sessions: 'Sessions',
+    games: 'Games',
+    rounds: 'Rounds scored',
+  },
+  leaderboardTitle: 'Leaderboard',
+  leaderboardHint: 'Ranked by sessions won.',
+  rank: 'Rank {n}',
+  sessionWins: '{count} session won | {count} sessions won',
+  sessionsPlayed: 'of {count} played | of {count} played',
+  winRate: 'Games won: {rate}',
+  winRateLabel: "{name}'s game win rate",
+  streak: '{count}-session streak',
+  bestStreak: 'Best streak: {count}',
+  partnershipsTitle: 'Best partnerships',
+  partnershipsEmpty: 'Once two players share a team at least twice, they show up here.',
+  partnershipRecord: '{wins} of {games} games won together',
+  recordTitle: 'Record',
+  bestGame: 'Best score in a game',
+  bestGameBy: '{names} · {date}',
+}
+
+export default { es, en }

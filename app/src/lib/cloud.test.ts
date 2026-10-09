@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { mergeSessions, type CloudState, type SyncedSession, type Tombstones } from './cloud'
+import { mergeById, parseSessionDoc, toPlain } from './cloud'
 import { DEFAULT_RULES } from '../domain/rules'
 import type { Session } from '../domain/types'
 
-// mergeSessions is pure and Firestore-free — the reconciliation logic that
-// decides cloud-sync outcomes, so it's worth guarding directly.
+// The pure half of cloud storage: validating Firestore docs and the
+// idempotent one-time copies between the device and the cloud.
 
-/** Minimal Session stub — merge only cares about `id`. */
-function session(id: string): Session {
+function session(id: string, date = '2026-01-01'): Session {
   return {
     id,
-    date: '2026-01-01',
+    date,
+    createdAt: 0,
     playerCount: 4,
-    players: [],
+    players: [{ id: 'p1', name: 'Ana' }],
     manoId: 'p1',
     initialDealerId: 'p1',
     plannedGames: 1,
@@ -22,93 +22,36 @@ function session(id: string): Session {
   }
 }
 
-function cloudSession(id: string, updatedAt: number): SyncedSession {
-  return { ...session(id), updatedAt }
-}
-
-function cloud(sessions: SyncedSession[], tombstones: Tombstones = {}): CloudState {
-  return { sessions, tombstones }
-}
-
-describe('mergeSessions', () => {
-  it('adopts a cloud-only session and does not schedule it for push', () => {
-    const { merged, toPush } = mergeSessions([], cloud([cloudSession('a', 100)]), {})
-    expect(merged.map((s) => s.id)).toEqual(['a'])
-    expect(toPush).toHaveLength(0)
+describe('parseSessionDoc', () => {
+  it('accepts a session doc and strips the server updatedAt', () => {
+    const parsed = parseSessionDoc({ ...session('a'), updatedAt: { seconds: 1 } })
+    expect(parsed).toEqual(session('a'))
   })
 
-  it('pushes a local-only session up', () => {
-    const { merged, toPush } = mergeSessions([session('a')], cloud([]), { a: 50 })
-    expect(merged.map((s) => s.id)).toEqual(['a'])
-    expect(toPush.map((s) => s.id)).toEqual(['a'])
-  })
-
-  it('local wins when its stamp is newer than cloud', () => {
-    const { merged, toPush } = mergeSessions([session('a')], cloud([cloudSession('a', 100)]), { a: 200 })
-    expect(merged).toHaveLength(1)
-    // local won → must be pushed up to overwrite the older cloud copy
-    expect(toPush.map((s) => s.id)).toEqual(['a'])
-  })
-
-  it('cloud wins when it is newer than the local stamp', () => {
-    const { merged, toPush } = mergeSessions([session('a')], cloud([cloudSession('a', 300)]), { a: 100 })
-    expect(merged).toHaveLength(1)
-    // cloud won and cloud already has it → nothing to push
-    expect(toPush).toHaveLength(0)
-  })
-
-  it('unstamped local session is treated as oldest (cloud wins)', () => {
-    const { toPush } = mergeSessions([session('a')], cloud([cloudSession('a', 1)]), {})
-    expect(toPush).toHaveLength(0)
-  })
-
-  it('unions disjoint local and cloud sets', () => {
-    const { merged, toPush } = mergeSessions([session('local')], cloud([cloudSession('cloud', 100)]), { local: 100 })
-    expect(merged.map((s) => s.id).sort()).toEqual(['cloud', 'local'])
-    expect(toPush.map((s) => s.id)).toEqual(['local'])
-  })
-
-  it('strips the updatedAt bookkeeping field from adopted cloud sessions', () => {
-    const { merged } = mergeSessions([], cloud([cloudSession('a', 100)]), {})
-    expect('updatedAt' in merged[0]).toBe(false)
+  it('rejects malformed docs', () => {
+    expect(parseSessionDoc({ id: 'a' })).toBeNull()
+    expect(parseSessionDoc(null)).toBeNull()
   })
 })
 
-describe('mergeSessions — deletes', () => {
-  it('a local delete newer than the cloud copy removes it and is pushed as a tombstone', () => {
-    const { merged, toDelete, tombstones } = mergeSessions([], cloud([cloudSession('a', 100)]), {}, { a: 200 })
-    expect(merged).toHaveLength(0)
-    expect(toDelete).toEqual({ a: 200 })
-    expect(tombstones).toEqual({ a: 200 })
+describe('mergeById', () => {
+  it('replaces same-id sessions in place and appends new ones', () => {
+    const merged = mergeById([session('a'), session('b')], [session('b', '2026-02-02'), session('c')])
+    expect(merged.map((s) => s.id)).toEqual(['a', 'b', 'c'])
+    expect(merged[1].date).toBe('2026-02-02')
   })
 
-  it('a cloud tombstone removes an older local copy (no resurrection from another device)', () => {
-    const { merged, toPush, toDelete, tombstones } = mergeSessions(
-      [session('a')],
-      cloud([], { a: 200 }),
-      { a: 100 },
-    )
-    expect(merged).toHaveLength(0)
-    expect(toPush).toHaveLength(0)
-    expect(toDelete).toEqual({})
-    expect(tombstones).toEqual({ a: 200 })
+  it('is idempotent — copying the same games twice changes nothing', () => {
+    const once = mergeById([session('a')], [session('b')])
+    expect(mergeById(once, [session('b')])).toEqual(once)
   })
+})
 
-  it('an edit newer than the delete wins and is pushed back up', () => {
-    const { merged, toPush, tombstones } = mergeSessions([session('a')], cloud([], { a: 100 }), { a: 200 })
-    expect(merged.map((s) => s.id)).toEqual(['a'])
-    expect(toPush.map((s) => s.id)).toEqual(['a'])
-    expect(tombstones).toEqual({})
-  })
-
-  it('a tombstone wins a tie with a session', () => {
-    const { merged } = mergeSessions([], cloud([cloudSession('a', 100)]), {}, { a: 100 })
-    expect(merged).toHaveLength(0)
-  })
-
-  it('does not re-push a tombstone the cloud already has', () => {
-    const { toDelete, tombstones } = mergeSessions([], cloud([], { a: 100 }), {}, { a: 100 })
-    expect(toDelete).toEqual({})
-    expect(tombstones).toEqual({ a: 100 })
+describe('toPlain', () => {
+  it('returns a deep copy', () => {
+    const original = session('a')
+    const copy = toPlain(original)
+    expect(copy).toEqual(original)
+    expect(copy.players).not.toBe(original.players)
   })
 })

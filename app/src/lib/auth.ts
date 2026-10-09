@@ -1,13 +1,10 @@
-// Auth + cloud-sync orchestration. This is the ONLY place that flips the
-// account store into signed-in mode (account.setSignedIn) — per the store's
-// contract, the UI never does it directly.
+// Firebase Auth ↔ account store, plus the account-level UI actions. This is
+// the ONLY place that flips the account store into signed-in mode
+// (account.setSignedIn) — per the store's contract, the UI never does it.
 //
-// registerAuth() is called once at startup (like registerNative). It subscribes
-// to Firebase auth state and, on sign-in, looks up the billing entitlement and
-// runs an initial two-way session merge. While signed-in + entitled, local
-// session mutations are pushed up (debounced via Pinia $subscribe). The same
-// entitlement refresh runs after a Stripe Checkout return, so paying starts
-// sync without a reload.
+// Membership and storage are NOT decided here: lib/sync.ts derives them live
+// from the server. This file just identifies the user and orchestrates the
+// sign-out / deletion steps.
 
 import {
   GoogleAuthProvider,
@@ -16,22 +13,12 @@ import {
   signOut as fbSignOut,
   type User,
 } from 'firebase/auth'
+import { watch } from 'vue'
 import { auth } from './firebase'
-import {
-  fetchCloudState,
-  fetchEntitlement,
-  mergeSessions,
-  pushSessions,
-  pushTombstones,
-  type Tombstones,
-} from './cloud'
+import { deleteCloudAccount } from './billing'
+import { keepOnDevice, leaveCloud, snapshotCloudGames, whileLeavingCloud } from './sync'
 import { useAccountStore } from '../stores/account'
-import { useSessionsStore } from '../stores/sessions'
-
-let syncUnsub: (() => void) | null = null
-// The uid sync is running (or starting) for — guards against the auth listener
-// and the checkout-return poll both kicking off an initial merge.
-let syncingUid: string | null = null
+import { useMembershipStore } from '../stores/membership'
 
 function toAccountUser(user: User) {
   return {
@@ -41,132 +28,78 @@ function toAccountUser(user: User) {
   }
 }
 
-/** Registered once at startup. Bridges Firebase auth state into the app. */
+/** Registered once at startup. Bridges Firebase auth state into the account store. */
 export function registerAuth(): void {
   const account = useAccountStore()
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      teardownSync()
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      account.setSignedIn(toAccountUser(user))
+    } else if (account.mode === 'signedIn') {
       // Only downgrade if we were signed in; leaves a fresh 'unset' launch alone.
-      if (account.mode === 'signedIn') account.signOut()
-      return
+      account.signOut()
     }
-
-    account.setSignedIn(toAccountUser(user))
-    await refreshEntitlement(user.uid)
   })
 }
 
-/**
- * Re-reads the billing entitlement and starts or stops sync to match. Safe to
- * call repeatedly: the initial merge runs once per signed-in uid.
- */
-async function refreshEntitlement(uid: string): Promise<boolean> {
-  const account = useAccountStore()
-  let entitled = false
-  try {
-    entitled = await fetchEntitlement(uid)
-  } catch {
-    entitled = false
-  }
-  account.setEntitled(entitled)
-
-  if (!entitled) {
-    teardownSync()
-  } else if (syncingUid !== uid) {
-    syncingUid = uid
-    await runInitialMerge(uid)
-    startSyncWatcher(uid)
-  }
-  return entitled
-}
-
-/**
- * Stripe Checkout return. The page has just reloaded, so wait for Firebase to
- * restore the user, then poll — the webhook that grants the entitlement may
- * land a few seconds after the redirect. Starts sync as soon as it does.
- */
-export async function awaitCheckoutEntitlement(attempts = 5, delayMs = 1500): Promise<boolean> {
-  await auth.authStateReady()
-  const uid = auth.currentUser?.uid
-  if (!uid) return false
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    if (await refreshEntitlement(uid)) return true
-    await new Promise((resolve) => setTimeout(resolve, delayMs))
-  }
-  return false
-}
-
-/** Pulls cloud state, merges with local (last-write-wins), pushes deltas up. */
-async function runInitialMerge(uid: string): Promise<void> {
-  const sessionsStore = useSessionsStore()
-  try {
-    const cloud = await fetchCloudState(uid)
-    const { merged, toPush, tombstones, toDelete } = mergeSessions(
-      sessionsStore.sessions,
-      cloud,
-      sessionsStore.sessionStamps,
-      sessionsStore.deletedStamps,
-    )
-    sessionsStore.adoptMerged(merged, tombstones)
-    if (toPush.length > 0) await pushSessions(uid, toPush)
-    if (Object.keys(toDelete).length > 0) await pushTombstones(uid, toDelete)
-  } catch (err) {
-    // Sync is best-effort; a failed merge must never break the local app.
-    console.error('[cloud] initial merge failed', err)
-  }
-}
-
-/**
- * Watches the sessions store and pushes changed sessions up while entitled.
- * Debounced by comparing stamps against the last push high-water mark.
- */
-function startSyncWatcher(uid: string): void {
-  const account = useAccountStore()
-  const sessionsStore = useSessionsStore()
-  if (syncUnsub) syncUnsub()
-
-  let lastPush = Date.now()
-  let timer: ReturnType<typeof setTimeout> | undefined
-
-  syncUnsub = sessionsStore.$subscribe(() => {
-    if (!account.cloudSyncEnabled) return
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(async () => {
-      const cutoff = lastPush
-      const changed = sessionsStore.sessions.filter(
-        (s) => (sessionsStore.sessionStamps[s.id] ?? 0) > cutoff,
-      )
-      const deleted: Tombstones = Object.fromEntries(
-        Object.entries(sessionsStore.deletedStamps).filter(([, stamp]) => stamp > cutoff),
-      )
-      lastPush = Date.now()
-      try {
-        if (changed.length > 0) await pushSessions(uid, changed)
-        if (Object.keys(deleted).length > 0) await pushTombstones(uid, deleted)
-      } catch (err) {
-        console.error('[cloud] push failed', err)
-      }
-    }, 800)
-  })
-}
-
-function teardownSync(): void {
-  if (syncUnsub) {
-    syncUnsub()
-    syncUnsub = null
-  }
-  syncingUid = null
-}
-
-/** UI action: Google sign-in via popup (web) — resolves once auth state flips. */
+/** UI action: Google sign-in via popup (web). onAuthStateChanged updates the store. */
 export async function signInWithGoogle(): Promise<void> {
-  const provider = new GoogleAuthProvider()
-  await signInWithPopup(auth, provider)
+  await signInWithPopup(auth, new GoogleAuthProvider())
 }
 
-/** UI action: sign out. onAuthStateChanged handles the store downgrade. */
-export async function signOutCloud(): Promise<void> {
+/** Resolves once the membership status is known (or after `timeoutMs`). */
+function membershipKnown(timeoutMs = 8000): Promise<void> {
+  const membership = useMembershipStore()
+  const known = () => membership.status !== 'checking' && membership.status !== 'anonymous'
+  if (known()) return Promise.resolve()
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer)
+      stop()
+      resolve()
+    }
+    const timer = setTimeout(finish, timeoutMs)
+    const stop = watch(known, (isKnown) => {
+      if (isKnown) finish()
+    })
+  })
+}
+
+/**
+ * UI action from the Club modal: sign in, then report whether this account
+ * already has Club — a subscriber on a new device must not be sent to checkout.
+ */
+export async function signInForClub(): Promise<boolean> {
+  await signInWithGoogle()
+  await membershipKnown()
+  return useMembershipStore().capabilities.canSync
+}
+
+/**
+ * UI action: sign out. With `keepCopy`, a member's cloud games are first
+ * copied onto this device; either way Firestore's offline cache is wiped.
+ */
+export async function signOutCloud({ keepCopy }: { keepCopy: boolean } = { keepCopy: false }): Promise<void> {
+  if (keepCopy) keepOnDevice(snapshotCloudGames())
+  await leaveCloud()
   await fbSignOut(auth)
+}
+
+/**
+ * UI action: delete the account and its cloud data (cancels Club). With
+ * `keepCopy`, the cloud games are copied onto this device first — they'd be
+ * gone afterwards. Throws (and changes nothing else) if the server fails.
+ */
+export async function deleteAccountAndSignOut({ keepCopy }: { keepCopy: boolean }): Promise<void> {
+  // Snapshot now (the live list empties as the server deletes), but only put
+  // it on the device once the deletion has succeeded.
+  const copy = keepCopy ? snapshotCloudGames() : null
+  // Cancelling the subscription server-side briefly looks like a lapse; keep
+  // that from copying games here (the user already chose above).
+  await whileLeavingCloud(async () => {
+    await deleteCloudAccount()
+    keepOnDevice(copy)
+    await leaveCloud()
+    // The auth user no longer exists server-side; this clears the local session.
+    await fbSignOut(auth)
+  })
 }

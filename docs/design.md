@@ -22,6 +22,31 @@ cold, never "startup-ish."
    subtle touches (colors, dividers, card-shape shadows), never literal
    illustrations that look clipart-y.
 
+## The Logo Is the Source
+
+The logo is a pun: *canasta* means basket — a woven basket holding a fan of
+cards, the ace of clubs in front. Drawn monoline in one brick red, with the
+club as the only filled shape. Everything else borrows from it:
+
+- **Colour:** `--color-wine` is the logo's red (`#9B2A2A`), not a separate
+  "wine" — so buttons, icons and the logo read as one brand. (The token keeps
+  its old name to avoid churn.)
+- **Motifs:** basket weave, playing cards, suits (mainly the club), and the
+  wine of card night. Not generic app imagery (clouds, charts, medals, flames).
+- **Weave band** (`.weave-band` in `main.css`): the basket's lattice as a thin
+  texture — the header underline and the welcome divider. Use it sparingly, as
+  punctuation; never as a background fill.
+- **Paper grain:** the page background is cream plus a faint warm grain
+  (`paper-grain.png`, 1.6 KB, set on `body` in `main.css`) so it reads as card
+  stock, not a flat screen. Cards and surfaces stay solid on top of it.
+- **Weave watermark** (`<WeaveWatermark />`): the logo's lattice, huge and
+  faint, in the bottom-right corner — brand moments only (welcome, empty
+  Home, empty dashboard). Never on screens with scores, forms or lists.
+- **Logo files:** `logo-color.svg` is the 512px master (a raster inside an
+  SVG — ask the designer for a true vector). The UI uses
+  `logo-color-256.webp`; `public/` has the favicons and `apple-touch-icon.png`,
+  all generated from the master.
+
 ## Color Palette
 
 | Token            | Value     | Usage                              |
@@ -31,10 +56,15 @@ cold, never "startup-ish."
 | `--color-walnut` | `#4A3728` | Primary text, headings             |
 | `--color-clay`   | `#7C5E4A` | Secondary text                     |
 | `--color-sage`   | `#5B7A5E` | Positive/success, "in progress"    |
-| `--color-wine`   | `#8B3A4A` | Accent, primary buttons, CTAs      |
-| `--color-gold`   | `#B8860B` | Winner highlights, badges          |
+| `--color-wine`   | `#9B2A2A` | The logo's red: accent, primary buttons, CTAs |
+| `--color-gold`   | `#8A6608` | Winner highlights, badges          |
 | `--color-rose`   | `#E8C4C4` | Soft highlight, hover states       |
 | `--color-ivory`  | `#FFFEF9` | Header/overlay background          |
+
+Any colour used for text (or with white text on it) must reach WCAG AA 4.5:1
+against cream, linen, ivory and its own `-light` tint. Gold was darkened from
+`#B8860B` (≈3:1) for this. `src/lib/shareCard.ts` mirrors these values for
+the share image — change both together.
 
 ## Typography
 
@@ -53,6 +83,26 @@ cold, never "startup-ish."
 - **Spacing:** Base rhythm 4px, prefer `p-4`/`p-5` over `p-3` for breathing room
 - **Touch targets:** Minimum 44×44px for all interactive elements (already enforced via `min-h-11`)
 - **Transitions:** 200ms ease for color/opacity, 250ms for transforms (already in transitions.css)
+
+## Icons
+
+- Components in `src/components/icons/`, never emoji (emoji render differently
+  on every platform and read as clipart).
+- Drawn like the logo: 24×24 grid, `fill="none"`, `stroke="currentColor"`,
+  round caps and joins — plus **one small filled suit** as the accent, the way
+  the logo's ace carries a solid club. Spot icons (menu, Club benefits,
+  dashboard) use `stroke-width="1.5"`; small action icons (trash, pencil,
+  chevron) use `2` and stay conventional so they're instantly recognised.
+- Subjects come from the card table: `BasketIcon` (backup), `DevicesIcon`
+  (same game everywhere), `ScorePadIcon` (stats — *anota*), `CheersIcon`
+  (game nights), `CardStackIcon` (games, streaks), `ClubIcon`. Utility icons
+  (settings, info, account) stay generic.
+- Leaderboard ranks are `RankCard` — a tiny playing card, gold for first —
+  not medals.
+- Colour comes from the caller via `text-*`. Spot icons sit in a rounded tile
+  tinted with a palette pair: `bg-wine-light text-wine`, `bg-sage-light text-sage`,
+  `bg-gold-light text-gold`, `bg-rose/30 text-walnut`.
+- Icons accompany text labels; they never replace them.
 
 ## Team Colors
 
