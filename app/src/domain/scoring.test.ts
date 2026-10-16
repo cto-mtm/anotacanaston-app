@@ -12,6 +12,7 @@ import {
   gameTallyPoints,
 } from './scoring'
 import { DEFAULT_RULES as R } from './rules'
+import { cardPoints, emptyCardCounts } from './constants'
 import { makeEntry, makeRound } from './test-helpers'
 import type { CanastaType, Game, HouseRules, Session } from './types'
 
@@ -559,5 +560,45 @@ describe('sessionTallies / sessionWinner', () => {
       const game: Game = { ...makeGame([round]), partnership: { A: ['p1'], B: ['p2'], C: ['p3'] } }
       expect(gameTallyPoints(game, R)).toEqual({ A: 6, B: 0, C: -6 })
     })
+  })
+})
+
+describe('validateRound — points must be multiples of 5', () => {
+  const clean = { clean: 1, dirty: 1 } as Record<CanastaType, number>
+
+  it('accepts melded and hand points that are multiples of 5', () => {
+    const round = makeRound({
+      A: makeEntry({ canastas: clean, meldedPoints: 240, handPoints: { p1: 35, p2: 0 } }),
+      B: makeEntry({ canastas: clean, meldedPoints: 5, handPoints: { p3: 120 } }),
+    })
+    expect(validateRound(round, 4, R).violations).not.toContainEqual(
+      expect.objectContaining({ code: 'pointsNotMultipleOfFive' }),
+    )
+  })
+
+  it('flags an off-step melded total for that team', () => {
+    const round = makeRound({ A: makeEntry({ canastas: clean, meldedPoints: 243 }), B: makeEntry() })
+    expect(validateRound(round, 4, R).violations).toContainEqual({ team: 'A', code: 'pointsNotMultipleOfFive' })
+  })
+
+  it('flags an off-step hand total for that team', () => {
+    const round = makeRound({ A: makeEntry(), B: makeEntry({ handPoints: { p3: 8 } }) })
+    const result = validateRound(round, 4, R)
+    expect(result.valid).toBe(false)
+    expect(result.violations).toContainEqual({ team: 'B', code: 'pointsNotMultipleOfFive' })
+  })
+})
+
+describe('cardPoints', () => {
+  it('values each card group (50 / 20 / 10 / 5)', () => {
+    expect(cardPoints({ joker: 1, aceOrDeuce: 2, high: 3, low: 4 })).toBe(50 + 40 + 30 + 20)
+  })
+
+  it('is zero for no cards', () => {
+    expect(cardPoints(emptyCardCounts())).toBe(0)
+  })
+
+  it('always yields a multiple of 5', () => {
+    expect(cardPoints({ joker: 0, aceOrDeuce: 0, high: 0, low: 7 }) % 5).toBe(0)
   })
 })

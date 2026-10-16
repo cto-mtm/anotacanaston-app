@@ -40,6 +40,10 @@ export interface Player {
   name: string
 }
 
+/** Card groups by point value, used by the card counter (see CARD_POINTS). */
+export type CardGroup = 'joker' | 'aceOrDeuce' | 'high' | 'low'
+export type CardCounts = Record<CardGroup, number>
+
 export interface TeamRoundEntry {
   exactCut: boolean
   misdeal: boolean
@@ -57,6 +61,11 @@ export interface TeamRoundEntry {
   blackThreesBonus: boolean
   meldedPoints: number
   handPoints: Record<PlayerId, number>
+  /** Optional audit trail: the cards counted to get `meldedPoints`. When
+   * present, `meldedPoints` equals cardPoints(meldedCards). */
+  meldedCards?: CardCounts
+  /** Optional audit trail per player: the cards counted to get `handPoints`. */
+  handCards?: Record<PlayerId, CardCounts>
 }
 
 export interface Round {

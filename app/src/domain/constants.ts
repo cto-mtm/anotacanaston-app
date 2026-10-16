@@ -1,4 +1,25 @@
-import type { CanastaType, PlayerCount, TeamId } from './types'
+import type { CanastaType, CardCounts, CardGroup, PlayerCount, TeamId } from './types'
+
+/** Point value per card group (jokers 50; aces and deuces 20; 8–K 10; 4–7 and black threes 5). */
+export const CARD_POINTS: Record<CardGroup, number> = {
+  joker: 50,
+  aceOrDeuce: 20,
+  high: 10,
+  low: 5,
+}
+
+export const CARD_GROUPS: readonly CardGroup[] = ['joker', 'aceOrDeuce', 'high', 'low']
+
+/** Every card is worth a multiple of this, so any valid points total is too. */
+export const CARD_POINT_STEP = 5
+
+export function emptyCardCounts(): CardCounts {
+  return { joker: 0, aceOrDeuce: 0, high: 0, low: 0 }
+}
+
+export function cardPoints(counts: CardCounts): number {
+  return CARD_GROUPS.reduce((sum, g) => sum + counts[g] * CARD_POINTS[g], 0)
+}
 
 // Canasta values, Canastón thresholds, penalties and the game target vary
 // between groups — they live per session in rules.ts, not here.

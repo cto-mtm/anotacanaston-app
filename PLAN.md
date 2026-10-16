@@ -78,7 +78,7 @@ Per-team checks return `violations` from `scoreRound`; these ROUND-level checks 
 
 The boilerplate's mandatory hero-transition demo is fulfilled by the real app: `SessionCard` block/title carry `viewTransitionName: 'session-' + id` / `'session-title-' + id`, matched on SessionDetailPage.
 
-Components: `SessionCard`, `ScoreboardHeader`, `ThresholdBanner`, `TeamRoundForm`, `CanastaCounter`, `PlayerPicker`, `PartnershipPicker`, `ScorePreview` + boilerplate's `AppShell` (nav: Partidas / Reglas / Acerca), `LocaleSwitcher`, `BaseButton`.
+Components: `SessionCard`, `ScoreboardHeader`, `ThresholdBanner`, `PlayerPicker`, `PartnershipPicker`, round entry in `components/round/` (`TeamRoundAccordion`, `RoundSection`, `CountStepper`, `CardPointsInput`, `RoundReview`; step order in `lib/roundFlow.ts`) + boilerplate's `AppShell` (nav: Partidas / Reglas / Acerca), `LocaleSwitcher`, `BaseButton`.
 
 ## Stores & persistence
 

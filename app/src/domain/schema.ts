@@ -22,6 +22,13 @@ export const canastasSchema = z.object({
   joker: z.number().int().min(0),
 })
 
+export const cardCountsSchema = z.object({
+  joker: z.number().int().min(0),
+  aceOrDeuce: z.number().int().min(0),
+  high: z.number().int().min(0),
+  low: z.number().int().min(0),
+})
+
 export const teamRoundEntrySchema = z.object({
   exactCut: z.boolean(),
   misdeal: z.boolean(),
@@ -34,6 +41,9 @@ export const teamRoundEntrySchema = z.object({
   blackThreesBonus: z.boolean(),
   meldedPoints: z.number().int().min(0),
   handPoints: z.record(playerIdSchema, z.number().int().min(0)),
+  // Optional card breakdowns — rounds saved before the card counter lack them.
+  meldedCards: cardCountsSchema.optional(),
+  handCards: z.record(playerIdSchema, cardCountsSchema).optional(),
 })
 
 export const roundSchema = z.object({

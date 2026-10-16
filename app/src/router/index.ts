@@ -14,11 +14,15 @@ const router = createRouter({
       path: '/sessions/:id/games/:g/rounds/new',
       name: 'round-new',
       component: () => import('../pages/RoundEntryPage.vue'),
+      // Score entry needs every pixel on a phone: the shell header slides
+      // away on scroll down and returns on scroll up.
+      meta: { autoHideHeader: true },
     },
     {
       path: '/sessions/:id/games/:g/rounds/:r',
       name: 'round-edit',
       component: () => import('../pages/RoundEntryPage.vue'),
+      meta: { autoHideHeader: true },
     },
     { path: '/stats', name: 'stats', component: () => import('../pages/DashboardPage.vue') },
     { path: '/rules', name: 'rules', component: () => import('../pages/RulesPage.vue') },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '../stores/account'
@@ -26,11 +26,75 @@ watch(
 watch(menuOpen, (open) => {
   document.documentElement.style.overflow = open ? 'hidden' : ''
 })
+
+// ── AUTO-HIDING HEADER ──────────────────────────────────────────
+// Routes with `meta.autoHideHeader` slide the header away on scroll down
+// and bring it back on scroll up. The visible header height is published
+// as --shell-header-offset so pages can pin their own sticky bars below it.
+const headerEl = ref<HTMLElement | null>(null)
+const headerHeight = ref(0)
+const headerHidden = ref(false)
+const autoHide = computed(() => route.meta.autoHideHeader === true)
+const SCROLL_DELTA = 8 // px of travel before the direction counts
+const ALWAYS_SHOW_ABOVE = 80 // px from the top where the header always shows
+let lastScrollY = 0
+
+function onScroll() {
+  const y = window.scrollY
+  if (!autoHide.value || y < ALWAYS_SHOW_ABOVE) {
+    headerHidden.value = false
+    lastScrollY = y
+    return
+  }
+  const delta = y - lastScrollY
+  if (Math.abs(delta) < SCROLL_DELTA) return
+  headerHidden.value = delta > 0
+  lastScrollY = y
+}
+
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  window.addEventListener('scroll', onScroll, { passive: true })
+  if (headerEl.value) {
+    resizeObserver = new ResizeObserver(() => {
+      headerHeight.value = headerEl.value?.offsetHeight ?? 0
+    })
+    resizeObserver.observe(headerEl.value)
+  }
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+  resizeObserver?.disconnect()
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    headerHidden.value = false
+  },
+)
+
+watch(
+  [headerHidden, headerHeight],
+  ([hidden, height]) => {
+    const root = document.documentElement.style
+    root.setProperty('--shell-header-offset', `${hidden ? 0 : height}px`)
+    // Full height regardless of visibility: scroll targets reserve room for
+    // a header that may slide back in while the page scrolls upward.
+    root.setProperty('--shell-header-height', `${height}px`)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div class="flex min-h-screen flex-col">
-    <header class="sticky top-0 z-20 flex items-center justify-between bg-ivory/90 px-5 pt-4 pb-5 backdrop-blur">
+    <header
+      ref="headerEl"
+      class="sticky top-0 z-20 flex items-center justify-between bg-ivory/90 px-5 pt-4 pb-5 backdrop-blur transition-transform duration-200 motion-reduce:transition-none"
+      :class="{ '-translate-y-full': headerHidden }"
+      :inert="headerHidden"
+    >
       <!-- The logo's basket weave as the header underline (main.css .weave-band). -->
       <div
         class="weave-band pointer-events-none absolute inset-x-0 bottom-0"

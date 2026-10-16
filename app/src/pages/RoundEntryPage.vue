@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { scoreRound, validateRound, checkCardSupply } from '../domain/scoring'
-import { teamsForGame } from '../domain/constants'
-import { ALL_CANASTA_TYPES } from '../domain/constants'
-import TeamRoundForm from '../components/TeamRoundForm.vue'
-import ScorePreview from '../components/ScorePreview.vue'
+import { ALL_CANASTA_TYPES, MAX_HONORS, emptyCardCounts, teamsForGame } from '../domain/constants'
+import TeamRoundAccordion from '../components/round/TeamRoundAccordion.vue'
+import RoundReview from '../components/round/RoundReview.vue'
 import BaseButton from '../components/BaseButton.vue'
-import type { CanastaType, PlayerId, TeamId, TeamRoundEntry } from '../domain/types'
+import { useRoundLines } from '../composables/useRoundLines'
+import {
+  allVisitKeys,
+  buildSteps,
+  currentStepIndex as flowStepIndex,
+  firstTodoStep,
+  isSectionVisited,
+  visitKey,
+  type RoundSectionKey,
+} from '../lib/roundFlow'
+import type { CanastaType, Player, PlayerId, TeamId, TeamRoundEntry } from '../domain/types'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const { formatPoints } = useRoundLines()
 const sessionsStore = useSessionsStore()
 
 const sessionId = computed(() => route.params.id as string)
@@ -25,9 +35,8 @@ const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
 const teams = computed(() => (game.value ? teamsForGame(game.value.partnership) : (['A', 'B'] as TeamId[])))
 const rules = computed(() => sessionsStore.getSessionRules(sessionId.value))
-
-// Mobile tab: show one team at a time on narrow screens
-const activeTeam = ref<TeamId>('A')
+const maxHonors = computed(() => MAX_HONORS[session.value?.playerCount ?? 4])
+const roundNumber = computed(() => (isEdit.value ? roundIndex.value + 1 : (game.value?.rounds.length ?? 0) + 1))
 
 function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
   const canastas = Object.fromEntries(ALL_CANASTA_TYPES.map((c) => [c, 0])) as Record<CanastaType, number>
@@ -45,6 +54,8 @@ function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
     blackThreesBonus: false,
     meldedPoints: 0,
     handPoints,
+    // New rounds count hand cards by default — few cards, easy to verify.
+    handCards: Object.fromEntries(playerIds.map((id) => [id, emptyCardCounts()])),
   }
 }
 
@@ -78,18 +89,173 @@ const cardSupplyWarnings = computed(() =>
   checkCardSupply({ entries: entries.value }, session.value?.playerCount ?? 4, teams.value),
 )
 
-function playersFor(team: TeamId) {
+function playersFor(team: TeamId): Player[] {
   const ids = game.value?.partnership[team] ?? []
-  return ids.map((id) => session.value?.players.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p))
+  return ids.map((id) => session.value?.players.find((p) => p.id === id)).filter((p): p is Player => Boolean(p))
 }
 
-function noCanastasClosed(entry: TeamRoundEntry): boolean {
-  return (
-    Object.values(entry.canastas).every((count) => count === 0) &&
-    Object.values(entry.canastasEnMano).every((count) => count === 0)
-  )
+const playersByTeam = computed(() => {
+  const result = { A: [], B: [], C: [] } as Record<TeamId, Player[]>
+  for (const team of teams.value) result[team] = playersFor(team)
+  return result
+})
+
+function teamLabel(team: TeamId) {
+  return t(`game.team.${team}`)
 }
 
+// ── ENTRY UPDATES ───────────────────────────────────────────────
+// Exact cut and misdeal can only belong to one team per round: setting
+// one clears it from the others instead of raising a violation later.
+function updateEntry(team: TeamId, next: TeamRoundEntry) {
+  const prev = entries.value[team]
+  entries.value[team] = next
+  for (const flag of ['exactCut', 'misdeal'] as const) {
+    if (!next[flag] || prev[flag]) continue
+    for (const other of teams.value) {
+      if (other !== team && entries.value[other][flag]) entries.value[other] = { ...entries.value[other], [flag]: false }
+    }
+  }
+}
+
+// "Who went out?" is one question for the whole round.
+const wentOutTeam = computed<TeamId | null>(() => teams.value.find((team) => entries.value[team].wentOut) ?? null)
+
+function setWentOut(team: TeamId | null) {
+  for (const other of teams.value) {
+    const entry = entries.value[other]
+    const wentOut = other === team
+    entries.value[other] = { ...entry, wentOut, blackThreesBonus: wentOut ? entry.blackThreesBonus : false }
+  }
+}
+
+function setBlackThrees(value: boolean) {
+  if (wentOutTeam.value) entries.value[wentOutTeam.value] = { ...entries.value[wentOutTeam.value], blackThreesBonus: value }
+}
+
+const wentOutInvalid = computed(() =>
+  wentOutTeam.value ? breakdowns.value[wentOutTeam.value].violations.some((v) => v.code === 'invalidIda') : false,
+)
+
+// ── GUIDED FLOW ─────────────────────────────────────────────────
+// One section open at a time. "Next" walks the table-talk order
+// (canastas → honors → melded → each player's hand → next team → review);
+// any section can also be opened directly by tapping it.
+const activeTeam = ref<TeamId>(teams.value[0])
+const openSection = ref<RoundSectionKey | null>(isEdit.value ? null : 'canastas')
+const activePlayerIndex = ref(0)
+const reviewing = ref(false)
+
+const playerCounts = computed(() => {
+  const counts = { A: 0, B: 0, C: 0 } as Record<TeamId, number>
+  for (const team of teams.value) counts[team] = playersByTeam.value[team].length
+  return counts
+})
+
+const steps = computed(() => buildSteps(teams.value, playerCounts.value))
+
+// Edited rounds start fully visited: every section shows its summary.
+const visited = ref(new Set<string>(isEdit.value ? allVisitKeys(teams.value, playerCounts.value) : []))
+
+/** Marks the step the scorer is leaving. Hand is tracked per player. */
+function markVisited(team: TeamId, section: RoundSectionKey | null, player = 0) {
+  if (!section) return
+  const key = visitKey(team, section, player)
+  if (!visited.value.has(key)) visited.value = new Set(visited.value).add(key)
+}
+
+function markCurrentVisited() {
+  markVisited(activeTeam.value, openSection.value, activePlayerIndex.value)
+}
+
+function isVisitedFor(team: TeamId) {
+  return (section: RoundSectionKey) => isSectionVisited(visited.value, team, section, playerCounts.value[team])
+}
+
+function teamDone(team: TeamId) {
+  return firstTodoStep(steps.value, visited.value, team) === null
+}
+
+const currentStepIndex = computed(() =>
+  flowStepIndex(steps.value, visited.value, {
+    team: activeTeam.value,
+    section: openSection.value,
+    player: activePlayerIndex.value,
+  }),
+)
+
+const nextStep = computed(() => steps.value[currentStepIndex.value + 1] ?? null)
+
+const nextLabel = computed(() => {
+  const next = nextStep.value
+  if (!next) return t('roundEntry.review')
+  if (next.team !== activeTeam.value) return t('roundEntry.next', { step: teamLabel(next.team) })
+  if (next.section === 'hand' && openSection.value === 'hand') {
+    return t('roundEntry.next', { step: playersByTeam.value[next.team][next.player]?.name ?? '' })
+  }
+  return t('roundEntry.next', { step: t(`roundEntry.sections.${next.section}`) })
+})
+
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+async function scrollToSection(team: TeamId, section: RoundSectionKey) {
+  await nextTick()
+  const el = document.getElementById(`round-${team}-${section}`)
+  el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })
+  // Move focus to the opened section's heading so keyboard and screen-reader
+  // users land where the new step starts.
+  el?.querySelector<HTMLElement>('h3 button')?.focus({ preventScroll: true })
+}
+
+function goTo(team: TeamId, section: RoundSectionKey | null, player = 0) {
+  markCurrentVisited()
+  reviewing.value = false
+  activeTeam.value = team
+  openSection.value = section
+  activePlayerIndex.value = player
+  if (section) scrollToSection(team, section)
+  else window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+}
+
+function toggleSection(section: RoundSectionKey) {
+  if (openSection.value === section) {
+    markCurrentVisited()
+    openSection.value = null
+  } else if (section === 'hand') {
+    // Reopen hand at the first player not yet asked.
+    const todo = firstTodoStep(steps.value, visited.value, activeTeam.value)
+    goTo(activeTeam.value, 'hand', todo?.section === 'hand' ? todo.player : 0)
+  } else {
+    goTo(activeTeam.value, section)
+  }
+}
+
+function selectPlayer(index: number) {
+  if (index === activePlayerIndex.value) return
+  markCurrentVisited()
+  activePlayerIndex.value = index
+}
+
+function selectTeam(team: TeamId) {
+  if (team === activeTeam.value && !reviewing.value) return
+  const todo = firstTodoStep(steps.value, visited.value, team)
+  goTo(team, todo?.section ?? null, todo?.player ?? 0)
+}
+
+function openReview() {
+  markCurrentVisited()
+  openSection.value = null
+  reviewing.value = true
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+}
+
+function goNext() {
+  const next = nextStep.value
+  if (!next) return openReview()
+  goTo(next.team, next.section, next.player)
+}
+
+// ── SAVE ────────────────────────────────────────────────────────
 function persist() {
   if (isEdit.value) {
     sessionsStore.updateRound(sessionId.value, gameIndex.value, roundIndex.value, entries.value)
@@ -100,10 +266,6 @@ function persist() {
   router.push(`/sessions/${sessionId.value}/games/${gameIndex.value}`)
 }
 
-function save() {
-  if (validation.value.valid) persist()
-}
-
 const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
   A: { active: 'border-wine bg-wine text-white shadow-sm shadow-wine/20', inactive: 'border-rose/40 bg-linen text-walnut' },
   B: { active: 'border-sage bg-sage text-white shadow-sm shadow-sage/20', inactive: 'border-rose/40 bg-linen text-walnut' },
@@ -112,101 +274,153 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
 </script>
 
 <template>
-  <div v-if="session && game">
-    <h1 class="mb-5 font-display text-2xl text-walnut">
-      {{ t(isEdit ? 'roundEntry.editTitle' : 'roundEntry.title') }}
-    </h1>
-
-    <!-- Team tabs: mobile only -->
-    <div class="mb-4 flex gap-2 md:hidden">
-      <button
-        v-for="team in teams"
-        :key="team"
-        type="button"
-        class="flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]"
-        :class="activeTeam === team ? teamTabColors[team].active : teamTabColors[team].inactive"
-        @click="activeTeam = team"
-      >
-        {{ t(`game.team.${team}`) }}
-      </button>
+  <div
+    v-if="session && game"
+    class="mx-auto flex max-w-xl flex-col"
+  >
+    <div class="mb-3 flex items-baseline justify-between gap-3">
+      <h1 class="font-display text-xl text-walnut">
+        {{ t(isEdit ? 'roundEntry.editTitle' : 'roundEntry.title') }}
+      </h1>
+      <span class="text-sm text-clay">{{ t('roundEntry.roundNumber', { n: roundNumber }) }}</span>
     </div>
 
+    <!-- Team tabs with live round totals; pinned just below the shell header
+         (which itself slides away on scroll down). -->
     <div
-      class="grid grid-cols-1 gap-4"
-      :class="teams.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'"
+      class="sticky z-10 -mx-5 mb-3 bg-cream/95 px-5 py-2 backdrop-blur transition-[top] duration-200 motion-reduce:transition-none"
+      :style="{ top: 'var(--shell-header-offset, 0px)' }"
     >
-      <div
-        v-for="team in teams"
-        :key="team"
-        :class="{ hidden: activeTeam !== team, 'md:block': true }"
-      >
-        <TeamRoundForm
-          v-model="entries[team]"
-          :players="playersFor(team)"
-          :team-label="t(`game.team.${team}`)"
-          :penalty-value="rules.penaltyValue"
-        />
-        <p
-          v-if="noCanastasClosed(entries[team])"
-          class="mt-2 text-sm text-gold"
+      <div class="flex gap-2">
+        <button
+          v-for="team in teams"
+          :key="team"
+          type="button"
+          class="flex min-h-12 flex-1 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all active:scale-[0.97]"
+          :class="activeTeam === team && !reviewing ? teamTabColors[team].active : teamTabColors[team].inactive"
+          :aria-pressed="activeTeam === team && !reviewing"
+          @click="selectTeam(team)"
         >
-          {{ t('roundEntry.noCanastasWarning') }}
-        </p>
-        <ScorePreview
-          class="mt-3"
-          :breakdown="breakdowns[team]"
-          :team-label="t(`game.team.${team}`)"
-        />
+          <span class="flex items-center gap-1 text-xs font-medium opacity-90">
+            {{ teamLabel(team) }}
+            <svg
+              v-if="teamDone(team)"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="h-3.5 w-3.5"
+              aria-hidden="true"
+            ><path d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.58l7.3-7.3a1 1 0 0 1 1.4 0Z" /></svg>
+          </span>
+          <span class="text-base font-semibold tabular-nums">{{ formatPoints(breakdowns[team].total) }}</span>
+        </button>
       </div>
     </div>
 
-    <div
-      v-if="!validation.valid"
-      class="mt-5 rounded-2xl border border-wine/30 bg-wine-light p-4 text-sm text-wine"
-    >
-      <ul class="mb-2 list-inside list-disc">
-        <li
-          v-for="(violation, i) in validation.violations"
-          :key="i"
+    <template v-if="!reviewing">
+      <!-- Round-level: asked once, not per team -->
+      <div class="mb-3 rounded-2xl border border-rose/40 bg-linen p-3">
+        <p
+          id="went-out-label"
+          class="mb-2 text-sm font-semibold text-walnut"
         >
-          {{ t(`roundEntry.violations.${violation.code}`) }}
-          <template v-if="violation.team">
-            — {{ t(`game.team.${violation.team}`) }}
-          </template>
-        </li>
-      </ul>
-      <p class="mb-2">
-        {{ t('roundEntry.overrideWarning') }}
-      </p>
-      <BaseButton @click="persist">
-        {{ t('roundEntry.saveAnyway') }}
-      </BaseButton>
-    </div>
-
-    <div
-      v-if="cardSupplyWarnings.length > 0"
-      class="mt-5 rounded-2xl border border-gold/30 bg-gold-light p-4 text-sm text-gold"
-    >
-      <p class="mb-2 font-semibold">
-        {{ t('roundEntry.cardSupplyTitle') }}
-      </p>
-      <ul class="list-inside list-disc">
-        <li
-          v-for="(warning, i) in cardSupplyWarnings"
-          :key="i"
+          {{ t('roundEntry.whoWentOut') }}
+        </p>
+        <div
+          class="flex gap-1.5"
+          role="group"
+          aria-labelledby="went-out-label"
         >
-          {{ t(`roundEntry.cardSupplyWarnings.${warning.code}`) }}
-          <template v-if="warning.team">
-            — {{ t(`game.team.${warning.team}`) }}
-          </template>
-        </li>
-      </ul>
-    </div>
+          <button
+            v-for="option in [...teams, null]"
+            :key="option ?? 'none'"
+            type="button"
+            class="min-h-10 flex-1 rounded-lg border px-2 text-sm font-medium transition-colors"
+            :class="wentOutTeam === option ? 'border-walnut bg-walnut text-white' : 'border-rose/40 bg-ivory text-walnut'"
+            :aria-pressed="wentOutTeam === option"
+            @click="setWentOut(option)"
+          >
+            {{ option ? teamLabel(option) : t('roundEntry.nobody') }}
+          </button>
+        </div>
+        <template v-if="wentOutTeam">
+          <label class="mt-2 flex min-h-10 items-center gap-3 text-sm text-walnut">
+            <input
+              type="checkbox"
+              class="h-5 w-5 rounded accent-wine"
+              :checked="entries[wentOutTeam].blackThreesBonus"
+              @change="setBlackThrees(($event.target as HTMLInputElement).checked)"
+            >
+            {{ t('roundEntry.blackThreesBonusLabel') }}
+          </label>
+          <p
+            v-if="wentOutInvalid"
+            class="text-xs text-wine"
+          >
+            {{ t('roundEntry.violations.invalidIda') }}
+          </p>
+        </template>
+      </div>
 
-    <div class="mt-6">
-      <BaseButton @click="save">
-        {{ t('roundEntry.save') }}
-      </BaseButton>
+      <TeamRoundAccordion
+        :key="activeTeam"
+        :model-value="entries[activeTeam]"
+        :team="activeTeam"
+        :players="playersByTeam[activeTeam]"
+        :rules="rules"
+        :breakdown="breakdowns[activeTeam]"
+        :max-honors="maxHonors"
+        :open-section="openSection"
+        :active-player-index="activePlayerIndex"
+        :is-visited="isVisitedFor(activeTeam)"
+        @update:model-value="updateEntry(activeTeam, $event)"
+        @toggle="toggleSection"
+        @select-player="selectPlayer"
+      />
+    </template>
+
+    <RoundReview
+      v-else
+      :teams="teams"
+      :entries="entries"
+      :breakdowns="breakdowns"
+      :players="playersByTeam"
+      :validation="validation"
+      :card-supply-warnings="cardSupplyWarnings"
+      @go-to="goTo"
+    />
+
+    <!-- Always-reachable actions; eats main's bottom padding so it sits flush. -->
+    <div class="safe-bottom sticky bottom-0 z-10 -mx-5 mt-4 -mb-6 border-t border-rose/40 bg-ivory/95 px-5 pt-3 backdrop-blur">
+      <div class="flex gap-2 pb-3">
+        <template v-if="!reviewing">
+          <BaseButton
+            variant="secondary"
+            @click="openReview"
+          >
+            {{ t('roundEntry.review') }}
+          </BaseButton>
+          <BaseButton
+            class="min-w-0 flex-1 truncate"
+            @click="goNext"
+          >
+            {{ nextLabel }} →
+          </BaseButton>
+        </template>
+        <template v-else>
+          <BaseButton
+            variant="secondary"
+            @click="goTo(activeTeam, null)"
+          >
+            {{ t('roundEntry.keepEditing') }}
+          </BaseButton>
+          <BaseButton
+            class="flex-1"
+            @click="persist"
+          >
+            {{ validation.valid ? t('roundEntry.save') : t('roundEntry.saveAnyway') }}
+          </BaseButton>
+        </template>
+      </div>
     </div>
   </div>
 </template>

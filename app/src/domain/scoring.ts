@@ -3,6 +3,7 @@ import {
   CLEAN_CANASTA_TYPES,
   DIRTY_CANASTA_TYPES,
   BLACK_THREES_BONUS_POINTS,
+  CARD_POINT_STEP,
   EXACT_CUT_BONUS,
   GOING_OUT_POINTS,
   JOKER_CANASTA_DEUCE_COUNT,
@@ -37,6 +38,7 @@ export type RoundViolationCode =
   | 'multipleWentOut'
   | 'multipleExactCut'
   | 'multipleMisdeal'
+  | 'pointsNotMultipleOfFive'
 
 export interface RoundViolation {
   team?: TeamId
@@ -169,6 +171,9 @@ export function validateRound(
     const breakdown = scoreRound(entry, rules)
     for (const v of breakdown.violations) violations.push({ ...v, team })
     if (entry.honors > maxHonors) violations.push({ team, code: 'honorsOverMax' })
+    // Every card is worth a multiple of 5, so any other total is a typo.
+    const typed = [entry.meldedPoints, ...Object.values(entry.handPoints)]
+    if (typed.some((p) => p % CARD_POINT_STEP !== 0)) violations.push({ team, code: 'pointsNotMultipleOfFive' })
   }
 
   const honorsSum = teams.reduce((sum, t) => sum + round.entries[t].honors, 0)
