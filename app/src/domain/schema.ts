@@ -47,6 +47,8 @@ export const teamRoundEntrySchema = z.object({
 })
 
 export const roundSchema = z.object({
+  // Rounds saved before ids existed get one on load (persisted on the next write).
+  id: z.string().min(1).default(() => crypto.randomUUID()),
   entries: z.object({
     A: teamRoundEntrySchema,
     B: teamRoundEntrySchema,
@@ -103,4 +105,5 @@ export const sessionSchema = z.object({
   rules: houseRulesSchema,
   games: z.array(gameSchema),
   status: z.enum(['in_progress', 'finished']),
+  endedEarly: z.boolean().optional(),
 })

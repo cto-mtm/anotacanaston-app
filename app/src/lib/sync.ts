@@ -157,7 +157,14 @@ function copyToDevice(uid: string, games: Session[]) {
 }
 
 /** Device-game actions that change a session (first argument: its id). */
-const LOCAL_EDIT_ACTIONS = new Set(['addRound', 'updateRound', 'deleteRound', 'finishSession', 'deleteSession'])
+const LOCAL_EDIT_ACTIONS = new Set([
+  'addRound',
+  'updateRound',
+  'deleteRound',
+  'finishSession',
+  'reopenSession',
+  'deleteSession',
+])
 
 /**
  * A copy of cloud games that's edited on the device is no longer just a copy:

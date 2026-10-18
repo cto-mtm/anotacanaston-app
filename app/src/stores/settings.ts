@@ -14,7 +14,6 @@ export const useSettingsStore = defineStore(
   'settings',
   () => {
     const locale = ref<SupportedLocale>('es')
-    const lastOpenSessionId = ref<string | null>(null)
     // The group's house rules, snapshotted into every NEW session. Existing
     // sessions keep the rules they were created with.
     const houseRules = ref<HouseRules>(cloneRules(DEFAULT_RULES))
@@ -51,10 +50,6 @@ export const useSettingsStore = defineStore(
       locale.value = next
     }
 
-    function setLastOpenSession(sessionId: string | null) {
-      lastOpenSessionId.value = sessionId
-    }
-
     function setHouseRules(next: HouseRules) {
       houseRules.value = cloneRules(next)
       houseRulesWriter.value?.(cloneRules(next))
@@ -75,14 +70,12 @@ export const useSettingsStore = defineStore(
 
     return {
       locale,
-      lastOpenSessionId,
       houseRules,
       houseRulesWriter,
       clubBannerDismissals,
       clubBannerSnoozedUntil,
       showClubBanner,
       setLocale,
-      setLastOpenSession,
       setHouseRules,
       resetHouseRules,
       adoptHouseRules,
@@ -93,10 +86,9 @@ export const useSettingsStore = defineStore(
   {
     persist: {
       version: 1,
-      pick: ['locale', 'lastOpenSessionId', 'houseRules', 'clubBannerDismissals', 'clubBannerSnoozedUntil'],
+      pick: ['locale', 'houseRules', 'clubBannerDismissals', 'clubBannerSnoozedUntil'],
       schema: z.object({
         locale: z.enum(SUPPORTED_LOCALES),
-        lastOpenSessionId: z.string().nullable(),
         houseRules: houseRulesSchema,
         // Defaults keep settings saved before these existed (rules, locale) valid.
         clubBannerDismissals: z.number().int().min(0).default(0),

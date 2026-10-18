@@ -29,6 +29,8 @@ export function makeEntry(overrides: Partial<TeamRoundEntry> = {}): TeamRoundEnt
 }
 
 /** Creates a Round with an empty C entry by default. */
+let roundSeq = 0
+
 export function makeRound(entries: { A: TeamRoundEntry; B: TeamRoundEntry; C?: TeamRoundEntry }): Round {
-  return { entries: { A: entries.A, B: entries.B, C: entries.C ?? makeEntry() } }
+  return { id: `r${++roundSeq}`, entries: { A: entries.A, B: entries.B, C: entries.C ?? makeEntry() } }
 }

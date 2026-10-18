@@ -3,6 +3,7 @@ import {
   scoreRound,
   validateRound,
   checkCardSupply,
+  canastaCounterMax,
   gameTotals,
   gameResult,
   meldThreshold,
@@ -12,7 +13,7 @@ import {
   gameTallyPoints,
 } from './scoring'
 import { DEFAULT_RULES as R } from './rules'
-import { cardPoints, emptyCardCounts } from './constants'
+import { cardPoints, emptyCardCounts, maxCanastasPerTeam } from './constants'
 import { makeEntry, makeRound } from './test-helpers'
 import type { CanastaType, Game, HouseRules, Session } from './types'
 
@@ -153,6 +154,93 @@ describe('scoreRound — house rules', () => {
   it('scores canastas with custom values', () => {
     const rules = { ...R, canastaValues: { ...R.canastaValues, clean: 600 } }
     expect(scoreRound(makeEntry({ canastas: { clean: 2 } as Record<CanastaType, number> }), rules).canastas).toBe(1_200)
+  })
+})
+
+describe('maxCanastasPerTeam', () => {
+  it('caps rank-locked canastas by the cards in play', () => {
+    expect(maxCanastasPerTeam(4)).toEqual({
+      clean: Number.POSITIVE_INFINITY,
+      dirty: 18, // one wildcard each, 12 deuces + 6 jokers
+      cleanAce: 1,
+      dirtyAce: 2,
+      cleanDeuce: 1,
+      dirtyDeuce: 2,
+      joker: 1,
+    })
+    expect(maxCanastasPerTeam(6)).toEqual({
+      clean: Number.POSITIVE_INFINITY,
+      dirty: 24, // 16 deuces + 8 jokers
+      cleanAce: 2,
+      dirtyAce: 3,
+      cleanDeuce: 2,
+      dirtyDeuce: 3,
+      joker: 1,
+    })
+  })
+
+  it('the cap itself never trips a card-supply warning, but one more always does', () => {
+    for (const playerCount of [4, 6] as const) {
+      const max = maxCanastasPerTeam(playerCount)
+      for (const type of ['dirty', 'cleanAce', 'dirtyAce', 'cleanDeuce', 'dirtyDeuce', 'joker'] as CanastaType[]) {
+        const atCap = makeRound({
+          A: makeEntry({ canastas: { [type]: max[type] } as Record<CanastaType, number> }),
+          B: makeEntry(),
+        })
+        expect(checkCardSupply(atCap, playerCount)).toEqual([])
+        // Split across normal and en mano: the supply check counts both.
+        const overCap = makeRound({
+          A: makeEntry({
+            canastas: { [type]: max[type] } as Record<CanastaType, number>,
+            canastasEnMano: { [type]: 1 } as Record<CanastaType, number>,
+          }),
+          B: makeEntry(),
+        })
+        expect(checkCardSupply(overCap, playerCount).length).toBeGreaterThan(0)
+      }
+    }
+  })
+})
+
+describe('validateRound — per-team deck caps', () => {
+  it('flags a team over the cap for a type, counting normal and en mano together', () => {
+    const round = makeRound({
+      A: makeEntry({
+        canastas: { joker: 1 } as Record<CanastaType, number>,
+        canastasEnMano: { joker: 1 } as Record<CanastaType, number>,
+      }),
+      B: makeEntry(),
+    })
+    expect(validateRound(round, 4, R).violations).toContainEqual({ team: 'A', code: 'canastaOverDeckMax' })
+  })
+
+  it('accepts counts at the cap, which depends on the player count', () => {
+    const round = makeRound({
+      A: makeEntry({ canastas: { cleanAce: 2, clean: 1, dirty: 1 } as Record<CanastaType, number> }),
+      B: makeEntry(),
+    })
+    expect(validateRound(round, 6, R).violations).not.toContainEqual({ team: 'A', code: 'canastaOverDeckMax' })
+    expect(validateRound(round, 4, R).violations).toContainEqual({ team: 'A', code: 'canastaOverDeckMax' })
+  })
+})
+
+describe('canastaCounterMax', () => {
+  it('normal and en mano share the per-team cap', () => {
+    const entry = makeEntry({ canastasEnMano: { joker: 1, dirtyAce: 1 } as Record<CanastaType, number> })
+    expect(canastaCounterMax(entry, 'joker', false, 4)).toBe(0)
+    expect(canastaCounterMax(entry, 'joker', true, 4)).toBe(1)
+    expect(canastaCounterMax(entry, 'dirtyAce', false, 4)).toBe(1)
+    expect(canastaCounterMax(entry, 'dirtyAce', false, 6)).toBe(2)
+  })
+
+  it('is uncapped for plain clean canastas', () => {
+    const entry = makeEntry({ canastasEnMano: { clean: 5 } as Record<CanastaType, number> })
+    expect(canastaCounterMax(entry, 'clean', false, 4)).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('never goes negative for an entry already over the cap', () => {
+    const entry = makeEntry({ canastasEnMano: { joker: 2 } as Record<CanastaType, number> })
+    expect(canastaCounterMax(entry, 'joker', false, 4)).toBe(0)
   })
 })
 
@@ -396,6 +484,33 @@ describe('checkCardSupply', () => {
       B: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
     })
     expect(checkCardSupply(round, 6)).toContainEqual({ code: 'jokerSupplyExceeded' })
+  })
+
+  it('counts the jokers and wildcards inside sucias de monos', () => {
+    // 4p: 6 jokers + 12 deuces = 18 wildcards. Joker canasta (7) + 2 monos (14) = 21 wildcards,
+    // and 6 + 1 + 1 = 8 jokers.
+    const round = makeRound({
+      A: makeEntry({ canastas: { dirtyDeuce: 2 } as Record<CanastaType, number> }),
+      B: makeEntry({ canastas: { joker: 1 } as Record<CanastaType, number> }),
+    })
+    const warnings = checkCardSupply(round, 4)
+    expect(warnings).toContainEqual({ code: 'wildcardSupplyExceeded' })
+    expect(warnings).toContainEqual({ code: 'jokerSupplyExceeded' })
+    expect(warnings).not.toContainEqual({ code: 'deuceSupplyExceeded' })
+  })
+
+  it('counts the wildcard every plain sucia needs', () => {
+    // 4p: 2 monos (14 wildcards) + 5 plain sucias (5) = 19 > 18.
+    const round = makeRound({
+      A: makeEntry({ canastas: { dirtyDeuce: 2, dirty: 5 } as Record<CanastaType, number> }),
+      B: makeEntry(),
+    })
+    expect(checkCardSupply(round, 4)).toContainEqual({ code: 'wildcardSupplyExceeded' })
+  })
+
+  it('is silent for two sucias de monos alone in a 4p game (14 of 18 wildcards)', () => {
+    const round = makeRound({ A: makeEntry({ canastas: { dirtyDeuce: 2 } as Record<CanastaType, number> }), B: makeEntry() })
+    expect(checkCardSupply(round, 4)).toEqual([])
   })
 })
 

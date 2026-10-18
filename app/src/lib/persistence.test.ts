@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, ref } from 'vue'
 import { createPinia, defineStore, setActivePinia } from 'pinia'
 import { z } from 'zod'
-import { createPersistencePlugin } from './persistence'
+import { createPersistencePlugin, flushPersistence } from './persistence'
 import { DEFAULT_RULES } from '../domain/rules'
 
 /** Minimal in-memory localStorage (the test environment is plain node). */
@@ -29,6 +29,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  // Pending saves are module-wide: write them into this test's storage, not the next one's.
+  flushPersistence()
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
@@ -125,6 +127,45 @@ describe('persistence plugin', () => {
     expect(store.locale).toBe('en')
     expect(store.houseRules).toEqual(rules)
     expect(store.clubBannerDismissals).toBe(0)
+  })
+
+  it('flushes a pending write at once (page hidden / closed)', () => {
+    const store = useV2Store()
+    store.items.push('x')
+    expect(storage.getItem('anotacanaston.test.v2')).toBeNull()
+    flushPersistence()
+    expect(JSON.parse(storage.getItem('anotacanaston.test.v2')!)).toEqual({ items: ['x'] })
+  })
+
+  it('skips the write when only unpicked state changed', async () => {
+    storage.setItem('anotacanaston.test.v2', JSON.stringify({ items: ['a'] }))
+    const store = useV2Store()
+    const setItem = vi.spyOn(storage, 'setItem')
+    store.scratch = 'changed'
+    await vi.runAllTimersAsync()
+    expect(setItem).not.toHaveBeenCalled()
+  })
+
+  it('keeps the valid sessions when one stored session is broken', async () => {
+    const good = {
+      id: 'ok',
+      date: '2026-01-01',
+      createdAt: 1,
+      playerCount: 4,
+      players: [{ id: 'p1', name: 'Ana' }],
+      manoId: 'p1',
+      initialDealerId: 'p1',
+      plannedGames: 1,
+      rules: DEFAULT_RULES,
+      games: [],
+      status: 'in_progress',
+    }
+    const raw = JSON.stringify({ localSessions: [good, { ...good, id: 'bad', playerCount: 5 }] })
+    storage.setItem('anotacanaston.sessions.v2', raw)
+    const { useSessionsStore } = await import('../stores/sessions')
+    expect(useSessionsStore().localSessions.map((s) => s.id)).toEqual(['ok'])
+    // The full original is still backed up.
+    expect(storage.getItem('anotacanaston.sessions.v2.corrupt')).toBe(raw)
   })
 
   it('persists only the picked keys, debounced', async () => {

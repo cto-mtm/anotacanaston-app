@@ -1,6 +1,6 @@
 import { useI18n } from 'vue-i18n'
 import { ALL_CANASTA_TYPES, CARD_GROUPS } from '../domain/constants'
-import type { RoundScoreBreakdown } from '../domain/scoring'
+import { totalCanastas, type RoundScoreBreakdown } from '../domain/scoring'
 import type { CardCounts, Player, TeamRoundEntry } from '../domain/types'
 
 import type { RoundSectionKey } from '../lib/roundFlow'
@@ -60,13 +60,12 @@ export function useRoundLines() {
     breakdown: RoundScoreBreakdown,
     players: Player[],
   ): Record<RoundSectionKey, SectionLine> {
-    const canastaCount = ALL_CANASTA_TYPES.reduce((s, c) => s + entry.canastas[c] + entry.canastasEnMano[c], 0)
     const handTotal = players.reduce((s, p) => s + (entry.handPoints[p.id] ?? 0), 0)
     return {
       canastas: {
         summary: canastasSummary(entry),
         points: breakdown.canastas + breakdown.countBonus,
-        filled: canastaCount > 0,
+        filled: totalCanastas(entry) > 0,
       },
       honors: {
         summary: entry.honors ? n(entry.honors) : t('roundEntry.none'),

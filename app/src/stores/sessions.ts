@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { z } from 'zod'
 import { sessionSchema } from '../domain/schema'
-import { gameResult, gameTotals, meldThreshold, sessionTallies, sessionWinner } from '../domain/scoring'
+import { gameResult, gameTotals, meldThreshold, sessionStatus, sessionTallies, sessionWinner } from '../domain/scoring'
 import { buildFourPlayerSchedule, buildSixPlayerGames2x3, buildSixPlayerGames3x2, type GameSkeleton } from '../domain/rotation'
 import { teamsForGame } from '../domain/constants'
 import { cloneRules, DEFAULT_RULES } from '../domain/rules'
@@ -99,7 +99,8 @@ export const useSessionsStore = defineStore(
         initialDealerId = firstDealer
       }
 
-      const games: Game[] = gameSkeletons.map((skeleton) => ({ ...skeleton, rounds: [] }))
+      // Plain copies, so the store never shares arrays with the wizard's local state.
+      const games: Game[] = gameSkeletons.map((skeleton) => ({ ...toPlain(skeleton), rounds: [] }))
 
       const session: Session = {
         id: crypto.randomUUID(),
@@ -107,7 +108,7 @@ export const useSessionsStore = defineStore(
         createdAt: Date.now(),
         playerCount: input.playerCount,
         sixPlayerFormat: input.playerCount === 6 ? input.sixPlayerFormat : undefined,
-        players: input.players,
+        players: toPlain(input.players),
         manoId: input.manoId,
         initialDealerId,
         plannedGames: games.length,
@@ -121,49 +122,67 @@ export const useSessionsStore = defineStore(
       return session
     }
 
+    /** Re-derives `status` after any change that can move a game's result. */
+    function syncStatus(session: Session) {
+      session.status = sessionStatus(session)
+    }
+
     function addRound(sessionId: string, gameIndex: number, entries: Record<TeamId, TeamRoundEntry>) {
       const session = findSession(sessionId)
       const game = session?.games[gameIndex]
       if (!session || !game) throw new Error('game not found')
-      game.rounds.push({ entries })
+      game.rounds.push({ id: crypto.randomUUID(), entries: toPlain(entries) })
+      syncStatus(session)
       commit(session)
     }
 
+    /**
+     * Replaces a round's entries, found by id (not position: another device
+     * may have deleted an earlier round meanwhile). Returns false if the round
+     * no longer exists, so the caller can tell the user instead of
+     * overwriting some other round.
+     */
     function updateRound(
       sessionId: string,
       gameIndex: number,
-      roundIndex: number,
+      roundId: string,
       entries: Record<TeamId, TeamRoundEntry>,
-    ) {
+    ): boolean {
       const session = findSession(sessionId)
-      const round = session?.games[gameIndex]?.rounds[roundIndex]
-      if (!session || !round) throw new Error('round not found')
-      round.entries = entries
+      const round = session?.games[gameIndex]?.rounds.find((r) => r.id === roundId)
+      if (!session || !round) return false
+      round.entries = toPlain(entries)
+      syncStatus(session)
       commit(session)
+      return true
     }
 
-    function deleteRound(sessionId: string, gameIndex: number, roundIndex: number) {
+    function deleteRound(sessionId: string, gameIndex: number, roundId: string) {
       const session = findSession(sessionId)
       const game = session?.games[gameIndex]
-      if (!session || !game) throw new Error('game not found')
-      game.rounds.splice(roundIndex, 1)
+      if (!session || !game) return
+      const index = game.rounds.findIndex((r) => r.id === roundId)
+      if (index === -1) return
+      game.rounds.splice(index, 1)
+      syncStatus(session)
       commit(session)
     }
 
-    /** Auto-finishes the session once every planned game has a result. */
-    function advanceGame(sessionId: string) {
-      const session = findSession(sessionId)
-      if (!session) return
-      const allFinished =
-        session.games.length >= session.plannedGames &&
-        session.games.every((game) => gameResult(game, session.rules).finished)
-      if (allFinished) finishSession(sessionId)
-    }
-
+    /** Ends the session now, even if some games have no winner yet. */
     function finishSession(sessionId: string) {
       const session = findSession(sessionId)
       if (!session) return
-      session.status = 'finished'
+      if (sessionStatus(session) !== 'finished') session.endedEarly = true
+      syncStatus(session)
+      commit(session)
+    }
+
+    /** Undoes finishSession: back to in progress unless every game is already won. */
+    function reopenSession(sessionId: string) {
+      const session = findSession(sessionId)
+      if (!session) return
+      delete session.endedEarly
+      syncStatus(session)
       commit(session)
     }
 
@@ -250,8 +269,8 @@ export const useSessionsStore = defineStore(
       addRound,
       updateRound,
       deleteRound,
-      advanceGame,
       finishSession,
+      reopenSession,
       deleteSession,
       useCloud,
       useLocal,
@@ -279,6 +298,16 @@ export const useSessionsStore = defineStore(
       migrate: (raw) => {
         const v1 = (raw ?? {}) as { sessions?: unknown; localSessions?: unknown }
         return { localSessions: v1.localSessions ?? v1.sessions ?? [] }
+      },
+      // One broken session must not hide the rest: keep every one that still validates.
+      salvage: (data) => {
+        const list = (data as { localSessions?: unknown } | null)?.localSessions
+        if (!Array.isArray(list)) return undefined
+        const localSessions = list.flatMap((raw) => {
+          const parsed = sessionSchema.safeParse(raw)
+          return parsed.success ? [parsed.data] : []
+        })
+        return { localSessions }
       },
     },
   },

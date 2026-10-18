@@ -1,6 +1,6 @@
 # Architecture
 
-Vite builds the SPA into `app/dist/`. `scripts/deploy.sh` copies that build into
+Vite builds the SPA into `app/dist/`. `scripts/deploy.mjs` (`npm run deploy`) copies that build into
 `firebase/app/`, where Firebase Hosting serves it with an SPA rewrite
 (`** → /index.html`) — required because the app uses `createWebHistory` (real
 URLs, no hash). The same `dist/` is what Capacitor packages into the iOS/Android

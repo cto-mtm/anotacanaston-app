@@ -12,7 +12,10 @@ import type { Session } from '../domain/types'
  */
 export function parseSessionDoc(data: unknown): Session | null {
   const parsed = sessionSchema.safeParse(data)
-  return parsed.success ? parsed.data : null
+  if (parsed.success) return parsed.data
+  // Skipped rather than crashing the list, but never silently.
+  console.warn('Skipping invalid session document', parsed.error.issues)
+  return null
 }
 
 /**

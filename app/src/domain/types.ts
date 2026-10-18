@@ -69,6 +69,8 @@ export interface TeamRoundEntry {
 }
 
 export interface Round {
+  /** Stable id: an edit or delete targets this round even if others shift position meanwhile. */
+  id: string
   entries: Record<TeamId, TeamRoundEntry>
 }
 
@@ -95,5 +97,8 @@ export interface Session {
   /** House rules snapshotted at creation — every score in the session uses these. */
   rules: HouseRules
   games: Game[]
+  /** Derived by sessionStatus() and kept in sync by every sessions-store action. */
   status: SessionStatus
+  /** The players called it before every game had a result (e.g. ran out of time). */
+  endedEarly?: boolean
 }

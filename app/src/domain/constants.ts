@@ -76,9 +76,8 @@ export function totalJokers(playerCount: PlayerCount): number {
 /**
  * Minimum real (non-wildcard) cards of a rank a single canasta of that rank
  * consumes — a canasta is 7+ cards, and "clean" means zero wildcards while
- * "dirty" allows up to 2. Used to sanity-check whether a combination of
- * rank-locked canastas (aces, deuces) is even possible given the cards
- * actually in the deck.
+ * "dirty" allows up to 2. Used by deckCardNeeds for ace canastas (canastas of
+ * wildcards are counted with WILDCARD_CANASTA_SIZE instead).
  */
 export const MIN_NATURAL_CARDS_PER_CLEAN_CANASTA = 7
 export const MIN_NATURAL_CARDS_PER_DIRTY_CANASTA = 5
@@ -86,6 +85,75 @@ export const MIN_NATURAL_CARDS_PER_DIRTY_CANASTA = 5
 /** A joker canasta is a fixed recipe, not "7 of a rank with wildcards". */
 export const JOKER_CANASTA_JOKER_COUNT = 6
 export const JOKER_CANASTA_DEUCE_COUNT = 1
+
+/** Cards in a canasta of wildcards (limpia de patos, sucia de monos, comodines). */
+const WILDCARD_CANASTA_SIZE = 7
+
+/** Cards by kind; `wildcards` is deuces and jokers together. */
+export interface DeckCards {
+  aces: number
+  deuces: number
+  jokers: number
+  wildcards: number
+}
+
+/**
+ * Minimum cards of each kind a set of canastas consumes. Any sucia (plain or
+ * de ases) needs at least 1 wildcard (otherwise it's clean); a sucia de monos
+ * is 7 wildcards with at least one deuce and one joker (otherwise it's a
+ * limpia de patos or of jokers). Plain clean canastas consume nothing here.
+ */
+export function deckCardNeeds(counts: Partial<Record<CanastaType, number>>): DeckCards {
+  const c = (type: CanastaType) => counts[type] ?? 0
+  return {
+    aces: c('cleanAce') * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + c('dirtyAce') * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA,
+    deuces: c('cleanDeuce') * WILDCARD_CANASTA_SIZE + c('joker') * JOKER_CANASTA_DEUCE_COUNT + c('dirtyDeuce'),
+    jokers: c('joker') * JOKER_CANASTA_JOKER_COUNT + c('dirtyDeuce'),
+    wildcards:
+      (c('cleanDeuce') + c('dirtyDeuce') + c('joker')) * WILDCARD_CANASTA_SIZE + c('dirty') + c('dirtyAce'),
+  }
+}
+
+export function deckCardSupply(playerCount: PlayerCount): DeckCards {
+  const deuces = totalDeuces(playerCount)
+  const jokers = totalJokers(playerCount)
+  return { aces: totalAces(playerCount), deuces, jokers, wildcards: deuces + jokers }
+}
+
+/** Which kinds of card `needs` asks for more of than `supply` has. */
+export function deckShortfalls(needs: DeckCards, supply: DeckCards): (keyof DeckCards)[] {
+  return (Object.keys(needs) as (keyof DeckCards)[]).filter((kind) => needs[kind] > supply[kind])
+}
+
+/**
+ * The most canastas of each type one team can close in a round (normal + en
+ * mano combined) if it held every card of that kind in play. Plain clean
+ * canastas use no rank-locked cards, so they're uncapped; plain dirty ones are
+ * capped by the wildcard each needs. Combinations across types and teams
+ * are checked separately by checkCardSupply, from the same deckCardNeeds model.
+ */
+export function maxCanastasPerTeam(playerCount: PlayerCount): Record<CanastaType, number> {
+  return MAX_CANASTAS_PER_TEAM[playerCount]
+}
+
+function computeMaxCanastasPerTeam(playerCount: PlayerCount): Record<CanastaType, number> {
+  const supply = deckCardSupply(playerCount)
+  const max = (type: CanastaType) => {
+    const perCanasta = deckCardNeeds({ [type]: 1 })
+    // A type that consumes no counted cards can never run the deck out.
+    if (Object.values(perCanasta).every((n) => n === 0)) return Number.POSITIVE_INFINITY
+    let n = 0
+    while (deckShortfalls(deckCardNeeds({ [type]: n + 1 }), supply).length === 0) n++
+    return n
+  }
+  return Object.fromEntries(ALL_CANASTA_TYPES.map((type) => [type, max(type)])) as Record<CanastaType, number>
+}
+
+// Only two player counts exist, so compute the caps once instead of on every render.
+const MAX_CANASTAS_PER_TEAM: Record<PlayerCount, Record<CanastaType, number>> = {
+  4: computeMaxCanastasPerTeam(4),
+  6: computeMaxCanastasPerTeam(6),
+}
 
 /**
  * Meld thresholds use <= boundaries against the team's cumulative score

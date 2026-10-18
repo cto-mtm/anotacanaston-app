@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { parseLocalDate } from '../lib/date'
 import BackButton from '../components/BackButton.vue'
+import BaseButton from '../components/BaseButton.vue'
 import TrashIcon from '../components/icons/TrashIcon.vue'
 
 const route = useRoute()
@@ -14,6 +15,25 @@ const sessionsStore = useSessionsStore()
 
 const session = computed(() => sessionsStore.findSession(route.params.id as string))
 const tallies = computed(() => (session.value ? sessionsStore.getSessionTallies(session.value.id) : {}))
+
+// Scored once per render, not once per field.
+const gameCards = computed(() => {
+  const current = session.value
+  if (!current) return []
+  return current.games.map((_g, i) => ({
+    teams: sessionsStore.getGameTeams(current.id, i),
+    totals: sessionsStore.getGameTotals(current.id, i),
+    finished: sessionsStore.getGameResult(current.id, i).finished,
+  }))
+})
+
+function onFinish() {
+  if (session.value && confirm(t('sessionDetail.confirmFinishSession'))) sessionsStore.finishSession(session.value.id)
+}
+
+function onReopen() {
+  if (session.value) sessionsStore.reopenSession(session.value.id)
+}
 
 function gameLink(index: number): string {
   return `/sessions/${session.value?.id}/games/${index}`
@@ -81,19 +101,42 @@ function onDelete() {
           {{ t('gameScreen.title', { n: i + 1 }) }}
         </p>
         <p class="text-sm text-clay">
-          {{ t('game.team.A') }} {{ sessionsStore.getGameTotals(session.id, i).A }} —
-          {{ t('game.team.B') }} {{ sessionsStore.getGameTotals(session.id, i).B }}
-          <template v-if="sessionsStore.getGameTeams(session.id, i).includes('C')">
-            — {{ t('game.team.C') }} {{ sessionsStore.getGameTotals(session.id, i).C }}
-          </template>
+          <span
+            v-for="(team, ti) in gameCards[i].teams"
+            :key="team"
+          ><template v-if="ti > 0"> — </template>{{ t(`game.team.${team}`) }} {{ gameCards[i].totals[team] }}</span>
         </p>
         <p
-          v-if="sessionsStore.getGameResult(session.id, i).finished"
+          v-if="gameCards[i].finished"
           class="text-xs font-medium text-sage"
         >
           {{ t('gameScreen.finished') }}
         </p>
       </RouterLink>
+    </div>
+
+    <div class="mt-6">
+      <BaseButton
+        v-if="session.status === 'in_progress'"
+        variant="secondary"
+        @click="onFinish"
+      >
+        {{ t('sessionDetail.finishSession') }}
+      </BaseButton>
+      <div
+        v-else-if="session.endedEarly"
+        class="flex items-center gap-3"
+      >
+        <p class="text-sm text-clay">
+          {{ t('sessionDetail.endedEarly') }}
+        </p>
+        <BaseButton
+          variant="secondary"
+          @click="onReopen"
+        >
+          {{ t('sessionDetail.reopenSession') }}
+        </BaseButton>
+      </div>
     </div>
 
     <button

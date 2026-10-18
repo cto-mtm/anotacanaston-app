@@ -34,9 +34,9 @@ function roundTotal(roundIndex: number, team: TeamId): number {
   return round ? scoreRound(round.entries[team], sessionsStore.getSessionRules(sessionId.value)).total : 0
 }
 
-function onDeleteRound(roundIndex: number) {
+function onDeleteRound(roundId: string) {
   if (confirm(t('gameScreen.confirmDeleteRound'))) {
-    sessionsStore.deleteRound(sessionId.value, gameIndex.value, roundIndex)
+    sessionsStore.deleteRound(sessionId.value, gameIndex.value, roundId)
   }
 }
 </script>
@@ -122,8 +122,8 @@ function onDeleteRound(roundIndex: number) {
       class="space-y-2"
     >
       <li
-        v-for="(_round, i) in game.rounds"
-        :key="i"
+        v-for="(round, i) in game.rounds"
+        :key="round.id"
         class="flex items-center justify-between rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
       >
         <span class="text-walnut">
@@ -146,7 +146,7 @@ function onDeleteRound(roundIndex: number) {
             class="flex h-10 w-10 items-center justify-center rounded-xl text-wine/70 transition-colors hover:bg-wine-light hover:text-wine"
             :aria-label="t('gameScreen.deleteRound')"
             :title="t('gameScreen.deleteRound')"
-            @click="onDeleteRound(i)"
+            @click="onDeleteRound(round.id)"
           >
             <TrashIcon class="h-5 w-5" />
           </button>

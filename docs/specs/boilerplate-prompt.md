@@ -39,7 +39,7 @@ app-boilerplate/
 ├── .gitignore
 ├── .firebaserc                  (template with REPLACE_ME project id)
 ├── scripts/
-│   └── deploy.sh                (build app → copy dist → firebase deploy)
+│   └── deploy.mjs               (build app → copy dist → firebase deploy; `npm run deploy`)
 ├── docs/
 │   ├── architecture.md
 │   ├── animations.md            (the animation cookbook — see below)
@@ -524,15 +524,16 @@ Implement `api` as a single `onRequest` v2 function with hand-rolled routing (no
 
 ---
 
-## `scripts/deploy.sh`
+## `scripts/deploy.mjs`
 
-A short, commented bash script (with `set -euo pipefail`) that makes the deploy story real instead of folklore:
+A short, commented Node script (cross-platform — no bash or shell builtins, so it runs on Windows too) that makes the deploy story real instead of folklore. Wire it up as `"deploy": "node scripts/deploy.mjs"` in the root `package.json`:
 
-1. `cd app && npm run build`
-2. `rm -rf ../firebase/app && cp -r dist ../firebase/app`
-3. `cd ../firebase && firebase deploy` (uses the real project from `.firebaserc` — fail fast with a clear message if it still says `REPLACE_ME`)
+1. Fail fast with a clear message if `.firebaserc` still says `REPLACE_ME`
+2. `npm run build` in `app/`
+3. Replace `firebase/app` with a copy of `app/dist`
+4. `firebase deploy` in `firebase/` (uses the real project from `.firebaserc`)
 
-Make it executable. Reference it from the README deploy section as the one true deploy path.
+Abort on the first failing step. Reference `npm run deploy` from the README deploy section as the one true deploy path.
 
 ---
 
@@ -597,7 +598,7 @@ Short and practical. Cover:
 4. **How to add a translated string / a new locale** (point to `docs/i18n.md`).
 5. How to add an API endpoint (add schema to `models.ts`, add route branch in `api.ts`, call via `apiFetch`) — and note it's testable immediately against the emulator.
 6. Going native: `npm run build`, `npx cap add ios|android`, `npm run cap:assets` (after dropping icon/splash sources into `app/assets/`), `npx cap sync`, open in Xcode/Android Studio; reminders that the API CORS allow-list already includes the Capacitor origins and that the Android back button is already handled in `lib/native.ts`.
-7. Deploy: set the real project id in `.firebaserc`, set `VITE_API_URL` for prod, then `./scripts/deploy.sh`.
+7. Deploy: set the real project id in `.firebaserc`, set `VITE_API_URL` for prod, then `npm run deploy`.
 8. **Keeping dependencies fresh** — include this section verbatim:
 
    ```markdown
@@ -629,7 +630,7 @@ Short and practical. Cover:
 
 ## `docs/architecture.md`
 
-A one-page brief explaining how the pieces fit together: Vite builds the SPA into `app/dist/`; `scripts/deploy.sh` copies it to `firebase/app/` where Firebase Hosting serves it with an SPA rewrite; the same `dist/` is what Capacitor packages into the iOS/Android shells (`webDir: 'dist'`); the app talks to one Cloud Function (`api`) over JSON with a CORS allow-list that includes both web and Capacitor origins; in local dev the function runs in the Firebase Emulator Suite under the offline `demo-app` project id and the app targets it via `VITE_API_URL`; navigation animations run through the View Transitions wrapper in the router with automatic degradation; all user-facing strings flow through vue-i18n.
+A one-page brief explaining how the pieces fit together: Vite builds the SPA into `app/dist/`; `scripts/deploy.mjs` (`npm run deploy`) copies it to `firebase/app/` where Firebase Hosting serves it with an SPA rewrite; the same `dist/` is what Capacitor packages into the iOS/Android shells (`webDir: 'dist'`); the app talks to one Cloud Function (`api`) over JSON with a CORS allow-list that includes both web and Capacitor origins; in local dev the function runs in the Firebase Emulator Suite under the offline `demo-app` project id and the app targets it via `VITE_API_URL`; navigation animations run through the View Transitions wrapper in the router with automatic degradation; all user-facing strings flow through vue-i18n.
 
 End with a short **"When you need deep links"** note: opening `https://yourdomain/items/3` directly into the native app requires Universal Links (iOS: `apple-app-site-association` file + Associated Domains entitlement) and App Links (Android: `assetlinks.json` + intent filters). It's deliberately not scaffolded — link the official Capacitor deep-links guide and note the SPA routes are already shaped to support it.
 

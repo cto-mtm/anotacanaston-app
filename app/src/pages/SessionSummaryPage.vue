@@ -7,6 +7,7 @@ import { parseLocalDate } from '../lib/date'
 import { renderShareCard } from '../lib/shareCard'
 import { shareImage } from '../lib/share'
 import BaseButton from '../components/BaseButton.vue'
+import type { TeamId } from '../domain/types'
 
 const route = useRoute()
 const { t, d } = useI18n()
@@ -27,6 +28,17 @@ function formatTally(score: number): string {
 function playerName(id: string): string {
   return session.value?.players.find((p) => p.id === id)?.name ?? id
 }
+
+// Columns for every team that plays in any game (C only exists in 3x2 games).
+const teams = computed<TeamId[]>(() =>
+  (['A', 'B', 'C'] as const).filter((team) =>
+    session.value?.games.some((_g, i) => sessionsStore.getGameTeams(session.value!.id, i).includes(team)),
+  ),
+)
+// Scored once per render, not once per cell.
+const totalsByGame = computed(() =>
+  session.value ? session.value.games.map((_g, i) => sessionsStore.getGameTotals(session.value!.id, i)) : [],
+)
 
 const sortedTallies = computed(() =>
   session.value
@@ -118,17 +130,12 @@ async function onShare() {
             <th class="px-4 py-2.5">
               {{ t('summary.gameColumn') }}
             </th>
-            <th class="px-4 py-2.5">
-              {{ t('game.team.A') }}
-            </th>
-            <th class="px-4 py-2.5">
-              {{ t('game.team.B') }}
-            </th>
             <th
-              v-if="session.sixPlayerFormat === '3x2'"
+              v-for="team in teams"
+              :key="team"
               class="px-4 py-2.5"
             >
-              {{ t('game.team.C') }}
+              {{ t(`game.team.${team}`) }}
             </th>
           </tr>
         </thead>
@@ -141,17 +148,12 @@ async function onShare() {
             <td class="px-4 py-2.5 text-walnut">
               {{ i + 1 }}
             </td>
-            <td class="px-4 py-2.5 tabular-nums text-walnut">
-              {{ sessionsStore.getGameTotals(session.id, i).A }}
-            </td>
-            <td class="px-4 py-2.5 tabular-nums text-walnut">
-              {{ sessionsStore.getGameTotals(session.id, i).B }}
-            </td>
             <td
-              v-if="session.sixPlayerFormat === '3x2'"
+              v-for="team in teams"
+              :key="team"
               class="px-4 py-2.5 tabular-nums text-walnut"
             >
-              {{ sessionsStore.getGameTotals(session.id, i).C }}
+              {{ totalsByGame[i]?.[team] }}
             </td>
           </tr>
         </tbody>

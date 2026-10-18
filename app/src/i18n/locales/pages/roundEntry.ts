@@ -64,10 +64,14 @@ const es = {
   sectionDone: 'Completado',
   sectionTodo: 'Pendiente',
   save: 'Guardar mano',
+  roundNotFound: 'Esta mano ya no existe. Puede que la hayan borrado desde otro dispositivo.',
+  backToGame: 'Volver al juego',
+  roundGone: 'No se guardaron los cambios: esta mano se borró desde otro dispositivo mientras la editabas.',
   violations: {
     invalidIda: 'La ida no es válida: hace falta al menos una canasta limpia y una sucia.',
     blackThreesWithoutIda: 'El bono de las 6 tapas negras solo se suma con una ida válida.',
     honorsOverMax: 'Ese equipo tiene más honores de los que existen en el mazo.',
+    canastaOverDeckMax: 'Ese equipo tiene más canastas de un tipo de las que caben con las cartas del mazo.',
     honorsSumOverMax: 'Entre los dos equipos hay más honores de los que existen en el mazo.',
     multipleWentOut: 'Solo un equipo puede cerrar la mano.',
     multipleExactCut: 'Solo un equipo puede tener el corte exacto.',
@@ -80,8 +84,9 @@ const es = {
   cardSupplyWarnings: {
     aceSupplyExceeded: 'Hacen falta más ases de los que hay en el mazo para esa cantidad de canastones de ases.',
     bothAceVariantsSameTeam: 'Ese equipo tiene un canastón de ases limpio y uno sucio a la vez: es muy poco probable con los ases disponibles.',
-    deuceSupplyExceeded: 'Hacen falta más patos de los que hay en el mazo (los canastones de comodines también usan un pato cada uno).',
-    jokerSupplyExceeded: 'Hacen falta más comodines de los que hay en el mazo para esa cantidad de canastones de comodines.',
+    deuceSupplyExceeded: 'Hacen falta más patos de los que hay en el mazo (las canastas de comodines y las sucias de monos también usan al menos un pato cada una).',
+    wildcardSupplyExceeded: 'Entre las canastas de patos, monos y comodines y las sucias hacen falta más monos (patos y comodines) de los que hay en el mazo.',
+    jokerSupplyExceeded: 'Hacen falta más comodines de los que hay en el mazo (cada canasta de comodines usa 6, y cada sucia de monos al menos uno).',
   },
 }
 
@@ -151,10 +156,14 @@ const en: typeof es = {
   sectionDone: 'Done',
   sectionTodo: 'To do',
   save: 'Save round',
+  roundNotFound: "This round doesn't exist anymore. It may have been deleted from another device.",
+  backToGame: 'Back to the game',
+  roundGone: 'Your changes were not saved: this round was deleted from another device while you were editing it.',
   violations: {
     invalidIda: 'Invalid la ida: at least one clean and one dirty canasta are required.',
     blackThreesWithoutIda: 'The 6-black-threes bonus only applies with a valid la ida.',
     honorsOverMax: 'That team has more honors than exist in the deck.',
+    canastaOverDeckMax: 'That team has more canastas of one type than the cards in the deck allow.',
     honorsSumOverMax: 'Between both teams there are more honors than exist in the deck.',
     multipleWentOut: 'Only one team can close the round.',
     multipleExactCut: 'Only one team can have the exact cut.',
@@ -167,8 +176,9 @@ const en: typeof es = {
   cardSupplyWarnings: {
     aceSupplyExceeded: 'That many ace canastas would need more aces than exist in the deck.',
     bothAceVariantsSameTeam: 'That team has both a clean and a dirty ace canasta — very unlikely given how few aces are in play.',
-    deuceSupplyExceeded: 'That would need more deuces than exist in the deck (joker canastas each use one deuce too).',
-    jokerSupplyExceeded: 'That many joker canastas would need more jokers than exist in the deck.',
+    deuceSupplyExceeded: 'That would need more deuces than exist in the deck (joker canastas and dirty monos canastas each use at least one deuce too).',
+    wildcardSupplyExceeded: 'Those deuce, monos, joker and dirty canastas together would need more wildcards (deuces and jokers) than exist in the deck.',
+    jokerSupplyExceeded: 'That would need more jokers than exist in the deck (each joker canasta uses 6, and each dirty monos canasta at least one).',
   },
 }
 

@@ -87,7 +87,8 @@ gesture back button is already handled in `app/src/lib/native.ts`.
 
 1. Set the real project id in `.firebaserc`.
 2. Set `VITE_API_URL` for prod (in `app/.env` or your build environment).
-3. `./scripts/deploy.sh`
+3. `npm run deploy` (from the repo root — builds the app and runs
+   `firebase deploy`; requires `firebase login`).
 
 ## Keeping dependencies fresh
 

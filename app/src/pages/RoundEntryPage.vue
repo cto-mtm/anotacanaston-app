@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
@@ -35,7 +35,8 @@ const session = computed(() => sessionsStore.findSession(sessionId.value))
 const game = computed(() => session.value?.games[gameIndex.value])
 const teams = computed(() => (game.value ? teamsForGame(game.value.partnership) : (['A', 'B'] as TeamId[])))
 const rules = computed(() => sessionsStore.getSessionRules(sessionId.value))
-const maxHonors = computed(() => MAX_HONORS[session.value?.playerCount ?? 4])
+const playerCount = computed(() => session.value?.playerCount ?? 4)
+const maxHonors = computed(() => MAX_HONORS[playerCount.value])
 const roundNumber = computed(() => (isEdit.value ? roundIndex.value + 1 : (game.value?.rounds.length ?? 0) + 1))
 
 function makeEmptyEntry(playerIds: PlayerId[]): TeamRoundEntry {
@@ -66,13 +67,23 @@ function cloneEntry(entry: TeamRoundEntry): TeamRoundEntry {
   return JSON.parse(JSON.stringify(entry))
 }
 
-const existingRound = isEdit.value ? game.value?.rounds[roundIndex.value] : undefined
+// The draft is filled once, as soon as the game (and, when editing, the
+// round) is available — on a refresh or app restore the session may still be
+// loading from the cloud when this page mounts. Until then nothing is shown
+// and nothing can be saved, so an empty draft can never overwrite a round.
+const loaded = ref(false)
+/** The round being edited, captured once: saving targets it by id, not position. */
+let editingRoundId: string | undefined
 
 const entries = ref<Record<TeamId, TeamRoundEntry>>({
-  A: existingRound ? cloneEntry(existingRound.entries.A) : makeEmptyEntry(game.value?.partnership.A ?? []),
-  B: existingRound ? cloneEntry(existingRound.entries.B) : makeEmptyEntry(game.value?.partnership.B ?? []),
-  C: existingRound ? cloneEntry(existingRound.entries.C) : makeEmptyEntry(game.value?.partnership.C ?? []),
+  A: makeEmptyEntry([]),
+  B: makeEmptyEntry([]),
+  C: makeEmptyEntry([]),
 })
+
+const roundMissing = computed(
+  () => isEdit.value && !loaded.value && game.value !== undefined && !game.value.rounds[roundIndex.value],
+)
 
 const breakdowns = computed(() => {
   const result: Partial<Record<TeamId, ReturnType<typeof scoreRound>>> = {}
@@ -81,12 +92,12 @@ const breakdowns = computed(() => {
 })
 
 const validation = computed(() =>
-  validateRound({ entries: entries.value }, session.value?.playerCount ?? 4, rules.value, teams.value),
+  validateRound({ entries: entries.value }, playerCount.value, rules.value, teams.value),
 )
 
 // Non-blocking: heads-up that a canasta combination looks off given the deck in play.
 const cardSupplyWarnings = computed(() =>
-  checkCardSupply({ entries: entries.value }, session.value?.playerCount ?? 4, teams.value),
+  checkCardSupply({ entries: entries.value }, playerCount.value, teams.value),
 )
 
 function playersFor(team: TeamId): Player[] {
@@ -154,8 +165,8 @@ const playerCounts = computed(() => {
 
 const steps = computed(() => buildSteps(teams.value, playerCounts.value))
 
-// Edited rounds start fully visited: every section shows its summary.
-const visited = ref(new Set<string>(isEdit.value ? allVisitKeys(teams.value, playerCounts.value) : []))
+// Filled on load (edited rounds start fully visited).
+const visited = ref(new Set<string>())
 
 /** Marks the step the scorer is leaving. Hand is tracked per player. */
 function markVisited(team: TeamId, section: RoundSectionKey | null, player = 0) {
@@ -255,14 +266,35 @@ function goNext() {
   goTo(next.team, next.section, next.player)
 }
 
+// ── LOAD ────────────────────────────────────────────────────────
+watch(
+  [game, () => game.value?.rounds[roundIndex.value]],
+  ([currentGame, existingRound]) => {
+    if (loaded.value || !currentGame) return
+    if (isEdit.value && !existingRound) return
+    entries.value = {
+      A: existingRound ? cloneEntry(existingRound.entries.A) : makeEmptyEntry(currentGame.partnership.A),
+      B: existingRound ? cloneEntry(existingRound.entries.B) : makeEmptyEntry(currentGame.partnership.B),
+      C: existingRound ? cloneEntry(existingRound.entries.C) : makeEmptyEntry(currentGame.partnership.C),
+    }
+    editingRoundId = existingRound?.id
+    activeTeam.value = teams.value[0]
+    // Edited rounds start fully visited: every section shows its summary.
+    if (isEdit.value) visited.value = new Set(allVisitKeys(teams.value, playerCounts.value))
+    loaded.value = true
+  },
+  { immediate: true },
+)
+
 // ── SAVE ────────────────────────────────────────────────────────
 function persist() {
-  if (isEdit.value) {
-    sessionsStore.updateRound(sessionId.value, gameIndex.value, roundIndex.value, entries.value)
+  if (!loaded.value) return
+  if (editingRoundId !== undefined) {
+    const saved = sessionsStore.updateRound(sessionId.value, gameIndex.value, editingRoundId, entries.value)
+    if (!saved) alert(t('roundEntry.roundGone'))
   } else {
     sessionsStore.addRound(sessionId.value, gameIndex.value, entries.value)
   }
-  sessionsStore.advanceGame(sessionId.value)
   router.push(`/sessions/${sessionId.value}/games/${gameIndex.value}`)
 }
 
@@ -275,7 +307,21 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
 
 <template>
   <div
-    v-if="session && game"
+    v-if="roundMissing"
+    class="mx-auto max-w-xl"
+  >
+    <p class="mb-4 text-walnut">
+      {{ t('roundEntry.roundNotFound') }}
+    </p>
+    <RouterLink
+      :to="`/sessions/${sessionId}/games/${gameIndex}`"
+      class="text-sm font-medium text-wine underline"
+    >
+      {{ t('roundEntry.backToGame') }}
+    </RouterLink>
+  </div>
+  <div
+    v-else-if="session && game && loaded"
     class="mx-auto flex max-w-xl flex-col"
   >
     <div class="mb-3 flex items-baseline justify-between gap-3">
@@ -369,6 +415,7 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
         :rules="rules"
         :breakdown="breakdowns[activeTeam]"
         :max-honors="maxHonors"
+        :player-count="playerCount"
         :open-section="openSection"
         :active-player-index="activePlayerIndex"
         :is-visited="isVisitedFor(activeTeam)"

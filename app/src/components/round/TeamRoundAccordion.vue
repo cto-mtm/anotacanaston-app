@@ -5,8 +5,8 @@ import RoundSection from './RoundSection.vue'
 import CountStepper from './CountStepper.vue'
 import CardPointsInput from './CardPointsInput.vue'
 import { ALL_CANASTA_TYPES } from '../../domain/constants'
-import type { RoundScoreBreakdown } from '../../domain/scoring'
-import type { CanastaType, CardCounts, HouseRules, Player, TeamId, TeamRoundEntry } from '../../domain/types'
+import { canastaCounterMax, canastaPoints, type RoundScoreBreakdown } from '../../domain/scoring'
+import type { CanastaType, CardCounts, HouseRules, Player, PlayerCount, TeamId, TeamRoundEntry } from '../../domain/types'
 import { useRoundLines, type RoundSectionKey } from '../../composables/useRoundLines'
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const props = defineProps<{
   rules: HouseRules
   breakdown: RoundScoreBreakdown
   maxHonors: number
+  playerCount: PlayerCount
   openSection: RoundSectionKey | null
   activePlayerIndex: number
   isVisited: (section: RoundSectionKey) => boolean
@@ -68,8 +69,7 @@ function setHand(playerId: string, { points, cards }: { points: number; cards?: 
 }
 
 function rowPoints(type: CanastaType): number {
-  const value = props.rules.canastaValues[type]
-  return props.modelValue.canastas[type] * value + props.modelValue.canastasEnMano[type] * value * 2
+  return canastaPoints(props.modelValue, type, props.rules)
 }
 
 const noCanastas = computed(() => !lines.value.canastas.filled)
@@ -111,11 +111,13 @@ const noCanastas = computed(() => !lines.value.canastas.filled)
           <CountStepper
             :model-value="modelValue.canastas[type]"
             :label="`${t(`game.canastaType.${type}`)} · ${t('roundEntry.canastaNormal')}`"
+            :max="canastaCounterMax(modelValue, type, false, playerCount)"
             @update:model-value="setCanasta(type, $event)"
           />
           <CountStepper
             :model-value="modelValue.canastasEnMano[type]"
             :label="`${t(`game.canastaType.${type}`)} · ${t('roundEntry.canastaEnMano')}`"
+            :max="canastaCounterMax(modelValue, type, true, playerCount)"
             tone="gold"
             @update:model-value="setCanastaEnMano(type, $event)"
           />

@@ -6,17 +6,15 @@ import {
   CARD_POINT_STEP,
   EXACT_CUT_BONUS,
   GOING_OUT_POINTS,
-  JOKER_CANASTA_DEUCE_COUNT,
-  JOKER_CANASTA_JOKER_COUNT,
   MAX_HONORS,
   MELD_THRESHOLDS,
   MELD_THRESHOLD_DEFAULT,
-  MIN_NATURAL_CARDS_PER_CLEAN_CANASTA,
-  MIN_NATURAL_CARDS_PER_DIRTY_CANASTA,
+  deckCardNeeds,
+  deckCardSupply,
+  deckShortfalls,
+  maxCanastasPerTeam,
   teamsForGame,
-  totalAces,
-  totalDeuces,
-  totalJokers,
+  type DeckCards,
 } from './constants'
 import type {
   CanastaType,
@@ -26,6 +24,7 @@ import type {
   PlayerId,
   Round,
   Session,
+  SessionStatus,
   TeamId,
   TeamRoundEntry,
 } from './types'
@@ -34,6 +33,7 @@ export type RoundViolationCode =
   | 'invalidIda'
   | 'blackThreesWithoutIda'
   | 'honorsOverMax'
+  | 'canastaOverDeckMax'
   | 'honorsSumOverMax'
   | 'multipleWentOut'
   | 'multipleExactCut'
@@ -68,8 +68,15 @@ function hasDirty(entry: TeamRoundEntry): boolean {
   return DIRTY_CANASTA_TYPES.some((t) => entry.canastas[t] > 0 || entry.canastasEnMano[t] > 0)
 }
 
-function totalCanastas(entry: TeamRoundEntry): number {
+/** Every canasta the team closed, normal and en mano. */
+export function totalCanastas(entry: TeamRoundEntry): number {
   return ALL_CANASTA_TYPES.reduce((sum, t) => sum + entry.canastas[t] + entry.canastasEnMano[t], 0)
+}
+
+/** Points from one canasta type: base value each, en mano ones doubled. */
+export function canastaPoints(entry: TeamRoundEntry, type: CanastaType, rules: HouseRules): number {
+  const value = rules.canastaValues[type]
+  return entry.canastas[type] * value + entry.canastasEnMano[type] * value * 2
 }
 
 export type HonorsClosedKind = 'both' | 'cleanOnly' | 'other'
@@ -108,16 +115,12 @@ function isValidIda(entry: TeamRoundEntry): boolean {
 export function scoreRound(entry: TeamRoundEntry, rules: HouseRules): RoundScoreBreakdown {
   const violations: RoundViolation[] = []
   const total = totalCanastas(entry)
-  const values = rules.canastaValues
 
   const cut = entry.exactCut ? EXACT_CUT_BONUS : 0
   const misdeal = entry.misdeal ? -rules.penaltyValue : 0
   const penalties = -(entry.badMelds + entry.tableTalk) * rules.penaltyValue
   const honors = honorsValue(entry.honors, entry)
-  const canastas = ALL_CANASTA_TYPES.reduce(
-    (sum, t) => sum + entry.canastas[t] * values[t] + entry.canastasEnMano[t] * values[t] * 2,
-    0,
-  )
+  const canastas = ALL_CANASTA_TYPES.reduce((sum, t) => sum + canastaPoints(entry, t, rules), 0)
   const bonus = countBonus(total, rules)
 
   let goingOut = 0
@@ -158,7 +161,7 @@ export interface RoundValidation {
  * round-level checks that require comparing both entries at once.
  */
 export function validateRound(
-  round: Round,
+  round: Pick<Round, 'entries'>,
   playerCount: PlayerCount,
   rules: HouseRules,
   teams: TeamId[] = ['A', 'B'],
@@ -171,6 +174,12 @@ export function validateRound(
     const breakdown = scoreRound(entry, rules)
     for (const v of breakdown.violations) violations.push({ ...v, team })
     if (entry.honors > maxHonors) violations.push({ team, code: 'honorsOverMax' })
+    // The round-entry steppers stop at the deck cap, but imported or synced
+    // data (or an old round) can still exceed it.
+    const caps = maxCanastasPerTeam(playerCount)
+    if (ALL_CANASTA_TYPES.some((type) => canastaCount(entry, type) > caps[type])) {
+      violations.push({ team, code: 'canastaOverDeckMax' })
+    }
     // Every card is worth a multiple of 5, so any other total is a typo.
     const typed = [entry.meldedPoints, ...Object.values(entry.handPoints)]
     if (typed.some((p) => p % CARD_POINT_STEP !== 0)) violations.push({ team, code: 'pointsNotMultipleOfFive' })
@@ -195,6 +204,7 @@ export type CardSupplyWarningCode =
   | 'aceSupplyExceeded'
   | 'bothAceVariantsSameTeam'
   | 'deuceSupplyExceeded'
+  | 'wildcardSupplyExceeded'
   | 'jokerSupplyExceeded'
 
 export interface CardSupplyWarning {
@@ -202,42 +212,55 @@ export interface CardSupplyWarning {
   code: CardSupplyWarningCode
 }
 
+const SHORTFALL_WARNING: Record<keyof DeckCards, CardSupplyWarningCode> = {
+  aces: 'aceSupplyExceeded',
+  deuces: 'deuceSupplyExceeded',
+  wildcards: 'wildcardSupplyExceeded',
+  jokers: 'jokerSupplyExceeded',
+}
+
+function canastaCount(entry: TeamRoundEntry, type: CanastaType): number {
+  return entry.canastas[type] + entry.canastasEnMano[type]
+}
+
 /**
- * Non-blocking sanity check: is this combination of rank-locked canastas
- * (aces, deuces, jokers) even possible given how many decks are actually in
- * play (3 for 4 players, 4 for 6 players)?
+ * Non-blocking sanity check: are these canastas even possible given how many
+ * aces, deuces and jokers the decks in play hold (3 decks for 4 players, 4 for
+ * 6)? Counts the canastas of aces, deuces, monos and jokers, plus the wildcard
+ * every plain sucia needs — see deckCardNeeds.
  */
-export function checkCardSupply(round: Round, playerCount: PlayerCount, teams: TeamId[] = ['A', 'B']): CardSupplyWarning[] {
+export function checkCardSupply(round: Pick<Round, 'entries'>, playerCount: PlayerCount, teams: TeamId[] = ['A', 'B']): CardSupplyWarning[] {
   const warnings: CardSupplyWarning[] = []
 
-  const count = (team: TeamId, type: CanastaType) =>
-    round.entries[team].canastas[type] + round.entries[team].canastasEnMano[type]
+  const totals = Object.fromEntries(
+    ALL_CANASTA_TYPES.map((type) => [type, teams.reduce((sum, t) => sum + canastaCount(round.entries[t], type), 0)]),
+  ) as Record<CanastaType, number>
+  const shortfalls = deckShortfalls(deckCardNeeds(totals), deckCardSupply(playerCount))
 
-  const cleanAceTotal = teams.reduce((sum, t) => sum + count(t, 'cleanAce'), 0)
-  const dirtyAceTotal = teams.reduce((sum, t) => sum + count(t, 'dirtyAce'), 0)
-  const minAcesNeeded =
-    cleanAceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA + dirtyAceTotal * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA
-  if (minAcesNeeded > totalAces(playerCount)) warnings.push({ code: 'aceSupplyExceeded' })
+  for (const kind of shortfalls) warnings.push({ code: SHORTFALL_WARNING[kind] })
 
   for (const team of teams) {
-    if (count(team, 'cleanAce') > 0 && count(team, 'dirtyAce') > 0) {
+    if (canastaCount(round.entries[team], 'cleanAce') > 0 && canastaCount(round.entries[team], 'dirtyAce') > 0) {
       warnings.push({ team, code: 'bothAceVariantsSameTeam' })
     }
   }
 
-  const jokerCanastaTotal = teams.reduce((sum, t) => sum + count(t, 'joker'), 0)
-  const cleanDeuceTotal = teams.reduce((sum, t) => sum + count(t, 'cleanDeuce'), 0)
-  const dirtyDeuceTotal = teams.reduce((sum, t) => sum + count(t, 'dirtyDeuce'), 0)
-  const minDeucesNeeded =
-    cleanDeuceTotal * MIN_NATURAL_CARDS_PER_CLEAN_CANASTA +
-    dirtyDeuceTotal * MIN_NATURAL_CARDS_PER_DIRTY_CANASTA +
-    jokerCanastaTotal * JOKER_CANASTA_DEUCE_COUNT
-  if (minDeucesNeeded > totalDeuces(playerCount)) warnings.push({ code: 'deuceSupplyExceeded' })
-
-  const minJokersNeeded = jokerCanastaTotal * JOKER_CANASTA_JOKER_COUNT
-  if (minJokersNeeded > totalJokers(playerCount)) warnings.push({ code: 'jokerSupplyExceeded' })
-
   return warnings
+}
+
+/**
+ * The highest value one canasta counter (normal or en mano) may take: the two
+ * counters share the per-team deck cap, so it's the cap minus the other
+ * counter. Never negative, even if the entry is already over the cap.
+ */
+export function canastaCounterMax(
+  entry: TeamRoundEntry,
+  type: CanastaType,
+  enMano: boolean,
+  playerCount: PlayerCount,
+): number {
+  const other = enMano ? entry.canastas[type] : entry.canastasEnMano[type]
+  return Math.max(0, maxCanastasPerTeam(playerCount)[type] - other)
 }
 
 export function gameTotals(game: Game, rules: HouseRules): Record<TeamId, number> {
@@ -269,6 +292,18 @@ export function gameResult(game: Game, rules: HouseRules): GameResult {
   const leaders = aboveTarget.filter((t) => totals[t] === maxScore)
   if (leaders.length > 1) return { finished: false }
   return { finished: true, winner: leaders[0] }
+}
+
+/**
+ * A session is finished once every planned game has a winner, or when the
+ * players ended it early. Recomputed after every change, so deleting or
+ * editing a round can reopen a session that was finished by its scores.
+ */
+export function sessionStatus(session: Session): SessionStatus {
+  const allGamesWon =
+    session.games.length >= session.plannedGames &&
+    session.games.every((game) => gameResult(game, session.rules).finished)
+  return allGamesWon || session.endedEarly ? 'finished' : 'in_progress'
 }
 
 export function meldThreshold(cumulative: number): { points: number; cleanOnly: boolean } {

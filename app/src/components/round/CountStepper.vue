@@ -18,7 +18,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: number] }>()
 const { t } = useI18n()
 
 function set(value: number) {
-  const next = Number.isFinite(value) ? Math.min(props.max, Math.max(props.min, Math.trunc(value))) : props.min
+  if (!Number.isFinite(value)) value = props.min
+  value = Math.trunc(value)
+  // Only cap increases: a count already over max (e.g. an old entry) steps down one at a time.
+  if (value > props.modelValue) value = Math.min(props.max, value)
+  const next = Math.max(props.min, value)
   if (next !== props.modelValue) emit('update:modelValue', next)
 }
 

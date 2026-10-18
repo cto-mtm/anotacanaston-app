@@ -33,6 +33,7 @@ Build **Anota Canaston**, a scorekeeper app for the card game Canastón (house-r
 - **Dealer/mano are tracked per GAME, not per round.** The house spec only defines their movement between partnership combinations; the app does not rotate the deal within a game.
 - **Attribution hints (soft, not blocking):** exact cut belongs to the cutter's team (the dealer's right-hand opponent cuts); misdeal belongs to the dealer's team. The round form pre-highlights the corresponding team's checkbox but never hard-blocks.
 - **En mano (×2):** a canasta melded straight from hand scores double its base value. Tracked as a second counter per canasta type (`canastasEnMano`), and counts toward la ida's clean/dirty requirement, the honors bracket, and the Canastón / Super Canastón count exactly like a regular canasta.
+- **Rank-locked canasta caps come from the deck, not a rule.** No rule limits how many ace / deuce / joker / monos canastas a team closes; the cards in play do. `maxCanastasPerTeam(playerCount)` caps each type per team (normal + en mano combined) at what one team could build holding every such card — jokers are always 1; clean aces and clean deuces are 1 with 4 players, 2 with 6; plain sucias are capped only by the wildcard each needs (18 / 24); plain limpias are uncapped. Round entry steppers enforce the cap (`canastaCounterMax`); cross-type and cross-team combinations stay non-blocking `checkCardSupply` warnings. Both derive from one card model, `deckCardNeeds` (aces, deuces, jokers, and deuces + jokers as one wildcard pool — a sucia de monos is 7 wildcards with at least one deuce and one joker; every other sucia uses at least one wildcard).
 - **Melded points include cards inside canastas** (canasta bonuses are in addition to card values) — shown as a hint under the field.
 
 ## Cross-team round validations (`validateRound(round, playerCount)` in scoring.ts)
@@ -82,7 +83,7 @@ Components: `SessionCard`, `ScoreboardHeader`, `ThresholdBanner`, `PlayerPicker`
 
 ## Stores & persistence
 
-- `stores/sessions.ts`: state = raw `Session[]`; getters delegate to the engine (`gameTotals`, `thresholds`, `tallies`); actions `createSession` (builds schedule via rotation.ts), `addRound`, `updateRound`, `deleteRound`, `advanceGame`, `finishSession`, `deleteSession`.
+- `stores/sessions.ts`: state = raw `Session[]`; getters delegate to the engine (`gameTotals`, `thresholds`, `tallies`); actions `createSession` (builds schedule via rotation.ts), `addRound`, `updateRound` / `deleteRound` (rounds are addressed by a stable `id`, not their position), `finishSession` (ends early, sets `endedEarly`), `reopenSession`, `deleteSession`. `status` is never set by hand: every action re-derives it with `sessionStatus()` (finished = every game won, or ended early), so deleting or editing a round can reopen a session.
 - `lib/persistence.ts`: small generic Pinia plugin — on init, read `localStorage['anotacanaston.<storeId>.v<version>']`, validate with zod (on failure: back up raw string to `.corrupt` key, start clean); debounced (300 ms) `$subscribe` writes; version + migrate hook.
 - `stores/settings.ts`: persisted locale + last-open session.
 
