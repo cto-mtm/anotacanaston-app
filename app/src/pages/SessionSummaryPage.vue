@@ -6,8 +6,9 @@ import { useSessionsStore } from '../stores/sessions'
 import { parseLocalDate } from '../lib/date'
 import { renderShareCard } from '../lib/shareCard'
 import { shareImage } from '../lib/share'
+import { teamNames } from '../lib/teamNames'
+import { gameTallyPoints } from '../domain/scoring'
 import BaseButton from '../components/BaseButton.vue'
-import type { TeamId } from '../domain/types'
 
 const route = useRoute()
 const { t, d } = useI18n()
@@ -29,16 +30,26 @@ function playerName(id: string): string {
   return session.value?.players.find((p) => p.id === id)?.name ?? id
 }
 
-// Columns for every team that plays in any game (C only exists in 3x2 games).
-const teams = computed<TeamId[]>(() =>
-  (['A', 'B', 'C'] as const).filter((team) =>
-    session.value?.games.some((_g, i) => sessionsStore.getGameTeams(session.value!.id, i).includes(team)),
-  ),
-)
-// Scored once per render, not once per cell.
-const totalsByGame = computed(() =>
-  session.value ? session.value.games.map((_g, i) => sessionsStore.getGameTotals(session.value!.id, i)) : [],
-)
+// Partnerships change from game to game, so each game lists its own pairs by
+// name — a fixed "Team A" column would mean different people in every row.
+// Rows carry what each pair added to its players' individual tallies, so this
+// section explains the ranking above. Scored once per render, not per row.
+const gameCards = computed(() => {
+  const current = session.value
+  if (!current) return []
+  const rules = sessionsStore.getSessionRules(current.id)
+  return current.games.map((game, i) => {
+    const names = teamNames(game.partnership, current.players, (team) => t(`game.team.${team}`))
+    const totals = sessionsStore.getGameTotals(current.id, i)
+    const tally = gameTallyPoints(game, rules)
+    const result = sessionsStore.getGameResult(current.id, i)
+    const rows = sessionsStore
+      .getGameTeams(current.id, i)
+      .map((team) => ({ team, names: names[team], total: totals[team], tally: tally[team], won: result.winner === team }))
+      .sort((a, b) => b.total - a.total)
+    return { n: i + 1, finished: result.finished, rows }
+  })
+})
 
 const sortedTallies = computed(() =>
   session.value
@@ -123,42 +134,40 @@ async function onShare() {
     <h2 class="mb-2 font-display text-lg text-walnut">
       {{ t('summary.perGameMatrix') }}
     </h2>
-    <div class="overflow-hidden rounded-xl border border-rose/40 bg-linen">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-rose/30 text-left text-clay">
-            <th class="px-4 py-2.5">
-              {{ t('summary.gameColumn') }}
-            </th>
-            <th
-              v-for="team in teams"
-              :key="team"
-              class="px-4 py-2.5"
-            >
-              {{ t(`game.team.${team}`) }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(_game, i) in session.games"
-            :key="i"
-            class="border-t border-rose/20"
-          >
-            <td class="px-4 py-2.5 text-walnut">
-              {{ i + 1 }}
-            </td>
-            <td
-              v-for="team in teams"
-              :key="team"
-              class="px-4 py-2.5 tabular-nums text-walnut"
-            >
-              {{ totalsByGame[i]?.[team] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ol class="space-y-2">
+      <li
+        v-for="card in gameCards"
+        :key="card.n"
+        class="rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
+      >
+        <p class="mb-1 flex justify-between text-xs font-medium text-clay">
+          <span>{{ t('gameScreen.title', { n: card.n }) }}</span>
+          <span v-if="!card.finished">{{ t('summary.gameInProgress') }}</span>
+        </p>
+        <p
+          v-for="row in card.rows"
+          :key="row.team"
+          class="flex items-center justify-between gap-3 py-0.5"
+          :class="row.won ? 'font-semibold text-walnut' : 'text-clay'"
+        >
+          <span class="flex min-w-0 items-center gap-1.5">
+            <span class="truncate">{{ row.names }}</span>
+            <span
+              v-if="row.won"
+              class="shrink-0 rounded-full bg-gold-light px-2 text-xs font-medium text-gold"
+            >{{ t('summary.gameWon') }}</span>
+          </span>
+          <span class="flex shrink-0 items-baseline gap-3 tabular-nums">
+            <span>{{ row.total }}</span>
+            <span
+              v-if="roundedScoring"
+              class="w-8 text-right text-xs"
+              :class="row.tally < 0 ? 'text-wine' : 'text-sage'"
+            >{{ formatTally(row.tally) }}</span>
+          </span>
+        </p>
+      </li>
+    </ol>
 
     <div class="mt-6 flex items-center justify-between gap-4">
       <RouterLink

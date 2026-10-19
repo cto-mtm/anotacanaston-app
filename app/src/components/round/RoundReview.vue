@@ -10,6 +10,8 @@ const props = defineProps<{
   entries: Record<TeamId, TeamRoundEntry>
   breakdowns: Record<TeamId, RoundScoreBreakdown>
   players: Record<TeamId, Player[]>
+  /** Each team's display label — its members' names. */
+  names: Record<TeamId, string>
   validation: RoundValidation
   cardSupplyWarnings: CardSupplyWarning[]
 }>()
@@ -42,7 +44,7 @@ function linesFor(team: TeamId) {
         class="min-w-0 rounded-2xl border border-rose/40 bg-linen p-3"
       >
         <p class="mb-1 truncate text-sm font-semibold text-walnut">
-          {{ t(`game.team.${team}`) }}
+          {{ names[team] }}
         </p>
         <ul class="text-sm">
           <li v-if="entries[team].wentOut">
@@ -100,7 +102,7 @@ function linesFor(team: TeamId) {
         >
           {{ t(`roundEntry.violations.${violation.code}`) }}
           <template v-if="violation.team">
-            — {{ t(`game.team.${violation.team}`) }}
+            — {{ names[violation.team] }}
           </template>
         </li>
       </ul>
@@ -123,7 +125,7 @@ function linesFor(team: TeamId) {
         >
           {{ t(`roundEntry.cardSupplyWarnings.${warning.code}`) }}
           <template v-if="warning.team">
-            — {{ t(`game.team.${warning.team}`) }}
+            — {{ names[warning.team] }}
           </template>
         </li>
       </ul>

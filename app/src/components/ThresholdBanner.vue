@@ -2,7 +2,8 @@
 import { useI18n } from 'vue-i18n'
 
 defineProps<{
-  team: 'A' | 'B' | 'C'
+  /** Who the threshold applies to — the team's member names. */
+  label: string
   threshold: { points: number; cleanOnly: boolean }
 }>()
 const { t } = useI18n()
@@ -11,7 +12,7 @@ const { t } = useI18n()
 <template>
   <div class="rounded-xl border border-gold/30 bg-gold-light p-3 text-sm">
     <p class="font-semibold text-gold">
-      {{ t('gameScreen.meldThreshold') }} — {{ t(`game.team.${team}`) }}: {{ threshold.points }}
+      {{ t('gameScreen.meldThreshold') }} — {{ label }}: {{ threshold.points }}
     </p>
     <p
       v-if="threshold.cleanOnly"

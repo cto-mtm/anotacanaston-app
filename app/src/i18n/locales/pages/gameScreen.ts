@@ -12,7 +12,7 @@ const es = {
   deleteRound: 'Eliminar mano',
   confirmDeleteRound: '¿Eliminar esta mano? Esta acción no se puede deshacer.',
   finished: 'Partida finalizada',
-  winner: 'Gana {team}',
+  winner: 'Ganadores: {team}',
   nextGame: 'Siguiente partida',
   viewSummary: 'Ver resumen de la sesión',
 }
@@ -31,7 +31,7 @@ const en: typeof es = {
   deleteRound: 'Delete round',
   confirmDeleteRound: 'Delete this round? This cannot be undone.',
   finished: 'Game finished',
-  winner: '{team} wins',
+  winner: 'Winners: {team}',
   nextGame: 'Next game',
   viewSummary: 'View session summary',
 }

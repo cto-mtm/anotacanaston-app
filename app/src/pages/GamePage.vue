@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { scoreRound } from '../domain/scoring'
+import { teamNames } from '../lib/teamNames'
 import ScoreboardHeader from '../components/ScoreboardHeader.vue'
 import ThresholdBanner from '../components/ThresholdBanner.vue'
 import BaseButton from '../components/BaseButton.vue'
@@ -29,6 +30,10 @@ const result = computed(() => sessionsStore.getGameResult(sessionId.value, gameI
 
 const isLastGame = computed(() => (session.value ? gameIndex.value === session.value.games.length - 1 : false))
 
+const names = computed(() =>
+  teamNames(game.value?.partnership, session.value?.players ?? [], (team) => t(`game.team.${team}`)),
+)
+
 function roundTotal(roundIndex: number, team: TeamId): number {
   const round = game.value?.rounds[roundIndex]
   return round ? scoreRound(round.entries[team], sessionsStore.getSessionRules(sessionId.value)).total : 0
@@ -52,7 +57,7 @@ function onDeleteRound(roundId: string) {
     <ScoreboardHeader
       :game="game"
       :totals="totals"
-      :players="session.players"
+      :names="names"
     />
 
     <div
@@ -63,7 +68,7 @@ function onDeleteRound(roundId: string) {
         {{ t('gameScreen.finished') }}
       </p>
       <p v-if="result.winner">
-        {{ t('gameScreen.winner', { team: t(`game.team.${result.winner}`) }) }}
+        {{ t('gameScreen.winner', { team: names[result.winner] }) }}
       </p>
       <RouterLink
         v-if="!isLastGame"
@@ -88,7 +93,7 @@ function onDeleteRound(roundId: string) {
       <ThresholdBanner
         v-for="team in teams"
         :key="team"
-        :team="team"
+        :label="names[team]"
         :threshold="thresholds[team]"
       />
     </div>
@@ -124,15 +129,19 @@ function onDeleteRound(roundId: string) {
       <li
         v-for="(round, i) in game.rounds"
         :key="round.id"
-        class="flex items-center justify-between rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
+        class="flex items-center justify-between gap-3 rounded-xl border border-rose/40 bg-linen px-4 py-3 text-sm"
       >
-        <span class="text-walnut">
-          <span v-for="(team, ti) in teams" :key="team">
-            <span v-if="ti > 0"> · </span>
-            {{ t(`game.team.${team}`) }}: {{ roundTotal(i, team) }}
+        <span class="min-w-0 flex-1 text-walnut">
+          <span
+            v-for="team in teams"
+            :key="team"
+            class="flex justify-between gap-2"
+          >
+            <span class="truncate">{{ names[team] }}</span>
+            <span class="shrink-0 tabular-nums">{{ roundTotal(i, team) }}</span>
           </span>
         </span>
-        <span class="flex gap-1">
+        <span class="flex shrink-0 gap-1">
           <RouterLink
             :to="`/sessions/${sessionId}/games/${gameIndex}/rounds/${i}`"
             class="flex h-10 w-10 items-center justify-center rounded-xl text-clay transition-colors hover:bg-rose/30 hover:text-walnut"

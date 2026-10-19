@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSessionsStore } from '../stores/sessions'
 import { parseLocalDate } from '../lib/date'
+import { teamNames } from '../lib/teamNames'
 import BackButton from '../components/BackButton.vue'
 import BaseButton from '../components/BaseButton.vue'
 import TrashIcon from '../components/icons/TrashIcon.vue'
@@ -20,8 +21,9 @@ const tallies = computed(() => (session.value ? sessionsStore.getSessionTallies(
 const gameCards = computed(() => {
   const current = session.value
   if (!current) return []
-  return current.games.map((_g, i) => ({
+  return current.games.map((g, i) => ({
     teams: sessionsStore.getGameTeams(current.id, i),
+    names: teamNames(g.partnership, current.players, (team) => t(`game.team.${team}`)),
     totals: sessionsStore.getGameTotals(current.id, i),
     finished: sessionsStore.getGameResult(current.id, i).finished,
   }))
@@ -100,11 +102,13 @@ function onDelete() {
         <p class="font-semibold text-walnut">
           {{ t('gameScreen.title', { n: i + 1 }) }}
         </p>
-        <p class="text-sm text-clay">
-          <span
-            v-for="(team, ti) in gameCards[i].teams"
-            :key="team"
-          ><template v-if="ti > 0"> — </template>{{ t(`game.team.${team}`) }} {{ gameCards[i].totals[team] }}</span>
+        <p
+          v-for="team in gameCards[i].teams"
+          :key="team"
+          class="flex justify-between gap-2 text-sm text-clay"
+        >
+          <span class="truncate">{{ gameCards[i].names[team] }}</span>
+          <span class="shrink-0 tabular-nums">{{ gameCards[i].totals[team] }}</span>
         </p>
         <p
           v-if="gameCards[i].finished"

@@ -9,6 +9,7 @@ import TeamRoundAccordion from '../components/round/TeamRoundAccordion.vue'
 import RoundReview from '../components/round/RoundReview.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { useRoundLines } from '../composables/useRoundLines'
+import { teamNames } from '../lib/teamNames'
 import {
   allVisitKeys,
   buildSteps,
@@ -111,9 +112,9 @@ const playersByTeam = computed(() => {
   return result
 })
 
-function teamLabel(team: TeamId) {
-  return t(`game.team.${team}`)
-}
+const names = computed(() =>
+  teamNames(game.value?.partnership, session.value?.players ?? [], (team) => t(`game.team.${team}`)),
+)
 
 // ── ENTRY UPDATES ───────────────────────────────────────────────
 // Exact cut and misdeal can only belong to one team per round: setting
@@ -200,7 +201,7 @@ const nextStep = computed(() => steps.value[currentStepIndex.value + 1] ?? null)
 const nextLabel = computed(() => {
   const next = nextStep.value
   if (!next) return t('roundEntry.review')
-  if (next.team !== activeTeam.value) return t('roundEntry.next', { step: teamLabel(next.team) })
+  if (next.team !== activeTeam.value) return t('roundEntry.next', { step: names.value[next.team] })
   if (next.section === 'hand' && openSection.value === 'hand') {
     return t('roundEntry.next', { step: playersByTeam.value[next.team][next.player]?.name ?? '' })
   }
@@ -342,13 +343,14 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
           v-for="team in teams"
           :key="team"
           type="button"
-          class="flex min-h-12 flex-1 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all active:scale-[0.97]"
+          class="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all active:scale-[0.97]"
           :class="activeTeam === team && !reviewing ? teamTabColors[team].active : teamTabColors[team].inactive"
           :aria-pressed="activeTeam === team && !reviewing"
+          :title="names[team]"
           @click="selectTeam(team)"
         >
-          <span class="flex items-center gap-1 text-xs font-medium opacity-90">
-            {{ teamLabel(team) }}
+          <span class="flex max-w-full items-center gap-1 text-xs font-medium opacity-90">
+            <span class="truncate">{{ names[team] }}</span>
             <svg
               v-if="teamDone(team)"
               viewBox="0 0 20 20"
@@ -380,12 +382,13 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
             v-for="option in [...teams, null]"
             :key="option ?? 'none'"
             type="button"
-            class="min-h-10 flex-1 rounded-lg border px-2 text-sm font-medium transition-colors"
+            class="min-h-10 min-w-0 flex-1 truncate rounded-lg border px-2 text-sm font-medium transition-colors"
             :class="wentOutTeam === option ? 'border-walnut bg-walnut text-white' : 'border-rose/40 bg-ivory text-walnut'"
             :aria-pressed="wentOutTeam === option"
+            :title="option ? names[option] : undefined"
             @click="setWentOut(option)"
           >
-            {{ option ? teamLabel(option) : t('roundEntry.nobody') }}
+            {{ option ? names[option] : t('roundEntry.nobody') }}
           </button>
         </div>
         <template v-if="wentOutTeam">
@@ -431,6 +434,7 @@ const teamTabColors: Record<TeamId, { active: string; inactive: string }> = {
       :entries="entries"
       :breakdowns="breakdowns"
       :players="playersByTeam"
+      :names="names"
       :validation="validation"
       :card-supply-warnings="cardSupplyWarnings"
       @go-to="goTo"
