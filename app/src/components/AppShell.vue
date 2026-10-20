@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAccountStore } from '../stores/account'
-import LocaleSwitcher from './LocaleSwitcher.vue'
+import ProfileAvatar from './ProfileAvatar.vue'
+import UserIcon from './icons/UserIcon.vue'
 import logo from '../assets/images/logo-color-256.webp'
 import CardStackIcon from './icons/CardStackIcon.vue'
 import ScorePadIcon from './icons/ScorePadIcon.vue'
@@ -12,6 +13,12 @@ const { t } = useI18n()
 const route = useRoute()
 const account = useAccountStore()
 const menuOpen = ref(false)
+
+// The header's profile button: who's signed in (hover / screen reader).
+const profileLabel = computed(() => {
+  const name = account.isSignedIn ? account.user?.displayName || account.user?.email : null
+  return name ? `${t('shell.profile')}: ${name}` : t('shell.profile')
+})
 
 // Closing on route change covers both tapping a nav link and any
 // programmatic navigation while the menu happens to be open.
@@ -112,71 +119,84 @@ watch(
         <span class="font-display text-lg text-walnut">Anota Canaston</span>
       </RouterLink>
 
-      <!-- Desktop nav -->
-      <div class="hidden items-center gap-5 sm:flex">
-        <nav class="flex gap-5 text-sm font-medium text-clay">
+      <div class="flex items-center gap-5">
+        <!-- Desktop nav -->
+        <div class="hidden items-center gap-5 sm:flex">
+          <nav class="flex gap-5 text-sm font-medium text-clay">
+            <RouterLink
+              to="/"
+              class="transition-colors hover:text-wine"
+            >
+              {{ t('shell.navSessions') }}
+            </RouterLink>
+            <RouterLink
+              to="/stats"
+              class="transition-colors hover:text-wine"
+            >
+              {{ t('shell.navStats') }}
+            </RouterLink>
+            <RouterLink
+              to="/rules"
+              class="transition-colors hover:text-wine"
+            >
+              {{ t('shell.navRules') }}
+            </RouterLink>
+            <RouterLink
+              to="/settings"
+              class="transition-colors hover:text-wine"
+            >
+              {{ t('shell.navSettings') }}
+            </RouterLink>
+            <RouterLink
+              to="/about"
+              class="transition-colors hover:text-wine"
+            >
+              {{ t('shell.navAbout') }}
+            </RouterLink>
+          </nav>
           <RouterLink
-            to="/"
-            class="transition-colors hover:text-wine"
+            v-if="account.mode === 'offline'"
+            to="/welcome"
+            class="rounded-full bg-gold-light px-2.5 py-1 text-xs font-medium text-gold transition-colors hover:bg-gold/20"
+            :title="t('shell.navAccount')"
           >
-            {{ t('shell.navSessions') }}
+            {{ t('shell.offlineBadge') }}
           </RouterLink>
-          <RouterLink
-            to="/stats"
-            class="transition-colors hover:text-wine"
-          >
-            {{ t('shell.navStats') }}
-          </RouterLink>
-          <RouterLink
-            to="/rules"
-            class="transition-colors hover:text-wine"
-          >
-            {{ t('shell.navRules') }}
-          </RouterLink>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Profile: always visible, so signing in shows up right away -->
           <RouterLink
             to="/settings"
-            class="transition-colors hover:text-wine"
+            class="flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-95"
+            :aria-label="profileLabel"
+            :title="profileLabel"
           >
-            {{ t('shell.navSettings') }}
+            <ProfileAvatar />
           </RouterLink>
-          <RouterLink
-            to="/about"
-            class="transition-colors hover:text-wine"
-          >
-            {{ t('shell.navAbout') }}
-          </RouterLink>
-        </nav>
-        <RouterLink
-          v-if="account.mode === 'offline'"
-          to="/welcome"
-          class="rounded-full bg-gold-light px-2.5 py-1 text-xs font-medium text-gold transition-colors hover:bg-gold/20"
-          :title="t('shell.navAccount')"
-        >
-          {{ t('shell.offlineBadge') }}
-        </RouterLink>
-        <LocaleSwitcher />
-      </div>
 
-      <!-- Mobile hamburger toggle -->
-      <button
-        type="button"
-        class="flex h-11 w-11 items-center justify-center rounded-xl text-walnut transition-colors hover:bg-linen sm:hidden"
-        :aria-label="t('shell.openMenu')"
-        aria-haspopup="true"
-        :aria-expanded="menuOpen"
-        @click="menuOpen = true"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          class="h-6 w-6"
-        >
-          <path d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+          <!-- Mobile hamburger toggle -->
+          <button
+            type="button"
+            class="flex h-11 w-11 items-center justify-center rounded-xl text-walnut transition-colors hover:bg-linen sm:hidden"
+            :aria-label="t('shell.openMenu')"
+            aria-haspopup="true"
+            :aria-expanded="menuOpen"
+            @click="menuOpen = true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              class="h-6 w-6"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </header>
 
     <main class="flex-1 px-5 py-6">
@@ -310,24 +330,25 @@ watch(
             <span class="text-lg font-medium text-walnut">{{ t('shell.navAbout') }}</span>
           </RouterLink>
 
+          <!-- Signed in: who you are, and it opens the account in Settings -->
           <RouterLink
+            v-if="account.isSignedIn"
+            to="/settings"
+            class="nav-stagger-7 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
+          >
+            <ProfileAvatar size="md" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-lg font-medium text-walnut">{{ account.user?.displayName || t('shell.navAccount') }}</span>
+              <span class="block truncate text-xs text-clay">{{ account.user?.email }}</span>
+            </span>
+          </RouterLink>
+          <RouterLink
+            v-else
             to="/welcome"
             class="nav-stagger-7 flex items-center gap-4 rounded-2xl border border-rose/30 bg-linen px-5 py-4 transition-all active:scale-[0.98]"
           >
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-wine-light text-wine">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                class="h-5 w-5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-                />
-              </svg>
+              <UserIcon class="h-5 w-5" />
             </span>
             <span class="flex-1 text-lg font-medium text-walnut">{{ t('shell.navAccount') }}</span>
             <span
@@ -340,11 +361,10 @@ watch(
         </nav>
 
         <!-- Footer -->
-        <div class="safe-bottom flex items-center justify-between border-t border-rose/30 px-5 py-4">
+        <div class="safe-bottom border-t border-rose/30 px-5 py-4">
           <p class="text-xs text-clay">
             Anota Canaston
           </p>
-          <LocaleSwitcher />
         </div>
       </div>
     </Transition>

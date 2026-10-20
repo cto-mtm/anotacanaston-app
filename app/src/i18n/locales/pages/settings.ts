@@ -24,6 +24,15 @@ const es = {
   },
   restoreDefaults: 'Volver a la hoja de reglas',
   saved: 'Guardado',
+  accountTitle: 'Cuenta',
+  notSignedIn: 'No has iniciado sesión. Tus partidas se guardan solo en este dispositivo.',
+  signIn: 'Iniciar sesión',
+  languageTitle: 'Idioma',
+  // Each language's own name, the same in every locale.
+  languageNames: {
+    es: 'Español',
+    en: 'English',
+  },
 }
 
 // Typed against es: a missing or extra key here is a compile error.
@@ -53,6 +62,14 @@ const en: typeof es = {
   },
   restoreDefaults: 'Reset to the rule sheet',
   saved: 'Saved',
+  accountTitle: 'Account',
+  notSignedIn: 'Not signed in. Your games are saved on this device only.',
+  signIn: 'Sign in',
+  languageTitle: 'Language',
+  languageNames: {
+    es: 'Español',
+    en: 'English',
+  },
 }
 
 export default { es, en }

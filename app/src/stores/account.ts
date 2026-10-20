@@ -14,6 +14,8 @@ export interface AccountUser {
   id: string
   email: string
   displayName: string | null
+  /** Google profile photo, when the account has one. */
+  photoURL?: string | null
 }
 
 /**
@@ -65,7 +67,12 @@ export const useAccountStore = defineStore(
       schema: z.object({
         mode: z.enum(ACCOUNT_MODES),
         user: z
-          .object({ id: z.string(), email: z.string(), displayName: z.string().nullable() })
+          .object({
+            id: z.string(),
+            email: z.string(),
+            displayName: z.string().nullable(),
+            photoURL: z.string().nullable().optional(),
+          })
           .nullable(),
       }),
     },

@@ -25,6 +25,7 @@ function toAccountUser(user: User) {
     id: user.uid,
     email: user.email ?? '',
     displayName: user.displayName,
+    photoURL: user.photoURL,
   }
 }
 

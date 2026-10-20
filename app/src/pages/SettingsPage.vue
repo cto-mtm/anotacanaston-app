@@ -11,6 +11,8 @@ import { ALL_CANASTA_TYPES } from '../domain/constants'
 import { cloneRules, DEFAULT_RULES } from '../domain/rules'
 import type { CanastaType, HouseRules, SessionScoringMethod } from '../domain/types'
 import BaseButton from '../components/BaseButton.vue'
+import LocaleSwitcher from '../components/LocaleSwitcher.vue'
+import ProfileAvatar from '../components/ProfileAvatar.vue'
 
 const { t, d } = useI18n()
 const settingsStore = useSettingsStore()
@@ -123,6 +125,77 @@ function restoreDefaults() {
         {{ t('settings.intro') }}
       </p>
     </div>
+
+    <section>
+      <h2 class="mb-3 font-display text-lg text-walnut">
+        {{ t('settings.accountTitle') }}
+      </h2>
+      <div class="rounded-xl border border-rose/40 bg-linen p-4">
+        <div class="flex items-center gap-4">
+          <ProfileAvatar size="lg" />
+          <div
+            v-if="account.isSignedIn"
+            class="min-w-0 flex-1"
+          >
+            <p
+              v-if="account.user?.displayName"
+              class="truncate font-medium text-walnut"
+            >
+              {{ account.user.displayName }}
+            </p>
+            <p class="truncate text-sm text-clay">
+              {{ account.user?.email }}
+            </p>
+          </div>
+          <p
+            v-else
+            class="flex-1 text-sm text-clay"
+          >
+            {{ t('settings.notSignedIn') }}
+          </p>
+        </div>
+        <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            v-if="account.isSignedIn"
+            type="button"
+            class="min-h-11 text-sm font-medium text-clay transition-colors hover:text-walnut hover:underline"
+            :disabled="accountBusy"
+            @click="signOut"
+          >
+            {{ t('account.signOut') }}
+          </button>
+          <RouterLink
+            v-else
+            :to="{ path: '/welcome', query: { redirect: '/settings' } }"
+            class="inline-flex min-h-11 items-center rounded-xl bg-wine px-4 text-sm font-semibold text-white shadow-sm shadow-wine/20 transition-all hover:bg-wine/90 active:scale-[0.97]"
+          >
+            {{ t('settings.signIn') }}
+          </RouterLink>
+        </div>
+        <p
+          v-if="accountError"
+          class="mt-2 text-sm text-wine"
+        >
+          {{ accountError }}
+        </p>
+        <button
+          v-if="account.isSignedIn"
+          type="button"
+          class="mt-2 min-h-11 text-sm font-medium text-wine transition-colors hover:underline"
+          :disabled="accountBusy"
+          @click="deleteAccount"
+        >
+          {{ t('account.deleteAccount') }}
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="mb-3 font-display text-lg text-walnut">
+        {{ t('settings.languageTitle') }}
+      </h2>
+      <LocaleSwitcher />
+    </section>
 
     <section>
       <h2 class="mb-3 font-display text-lg text-walnut">
@@ -277,34 +350,16 @@ function restoreDefaults() {
         >
           {{ t('account.manageBilling') }}
         </BaseButton>
-        <button
-          v-if="account.isSignedIn"
-          type="button"
-          class="min-h-11 text-sm font-medium text-clay transition-colors hover:text-walnut hover:underline"
-          :disabled="accountBusy"
-          @click="signOut"
-        >
-          {{ t('account.signOut') }}
-        </button>
       </div>
       <p
-        v-if="accountError || billingError"
+        v-if="billingError"
         class="mt-2 text-sm text-wine"
       >
-        {{ accountError ?? billingError }}
+        {{ billingError }}
       </p>
-      <button
-        v-if="account.isSignedIn"
-        type="button"
-        class="mt-4 min-h-11 text-sm font-medium text-wine transition-colors hover:underline"
-        :disabled="accountBusy"
-        @click="deleteAccount"
-      >
-        {{ t('account.deleteAccount') }}
-      </button>
       <RouterLink
         to="/privacy"
-        class="mt-2 block text-xs text-clay hover:text-walnut hover:underline"
+        class="mt-3 block text-xs text-clay hover:text-walnut hover:underline"
       >
         {{ t('privacy.title') }}
       </RouterLink>

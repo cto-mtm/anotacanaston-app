@@ -1,11 +1,13 @@
 import type { Request } from 'firebase-functions/v2/https'
 import type { Response } from 'express'
 
-// Production origins for the Anota Canaston web app (Firebase Hosting default
-// domains for the `anotacanaston-app` project) plus local dev.
+// Production origins for the Anota Canaston web app (custom domain plus the
+// Firebase Hosting default domains for the `anotacanaston-app` project) plus
+// local dev.
 // The last two entries are what the iOS/Android Capacitor shells send as
 // Origin; keep them — deleting them breaks the native builds' API calls.
 const ALLOWED_ORIGINS = [
+  'https://app.anotacanaston.com',
   'https://anotacanaston-app.web.app',
   'https://anotacanaston-app.firebaseapp.com',
   'http://localhost:5173',
