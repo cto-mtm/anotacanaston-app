@@ -83,12 +83,14 @@ The API CORS allow-list already includes the Capacitor origins
 (`capacitor://localhost`, `http://localhost`), and the Android hardware/
 gesture back button is already handled in `app/src/lib/native.ts`.
 
+Store releases (Play internal testing / TestFlight via `deploy:android` / `deploy:ios`) are planned in [`docs/plans/mobile-release.md`](docs/plans/mobile-release.md) — read it before running `cap add`, because the plan commits the native projects.
+
 ## Deploy
 
 1. Set the real project id in `.firebaserc`.
 2. Set `VITE_API_URL` for prod (in `app/.env` or your build environment).
-3. `npm run deploy` (from the repo root — builds the app and runs
-   `firebase deploy`; requires `firebase login`).
+3. `npm run deploy` (from the repo root — builds the app and the Cloud
+   Functions, then runs `firebase deploy`; requires `firebase login`).
 
 ## Keeping dependencies fresh
 

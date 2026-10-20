@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Deploy the app: build the SPA, copy it into firebase/app, then deploy.
+// Deploy the app: build the SPA, copy it into firebase/app, build the
+// Cloud Functions, then deploy.
 // This is the one true deploy path — see README.md "Deploy" section.
 // Cross-platform (Windows/macOS/Linux): no bash/shell builtins required.
 import { spawnSync } from "node:child_process";
@@ -49,6 +50,11 @@ if (!existsSync(dist)) {
 }
 rmSync(dest, { recursive: true, force: true });
 cpSync(dist, dest, { recursive: true });
+
+// firebase-tools uploads the compiled functions/lib/, not src/ — without this
+// step a stale lib/ gets deployed and source changes silently never ship.
+console.log("==> Building firebase/functions/");
+run("npm", ["run", "build"], join(repoRoot, "firebase", "functions"));
 
 console.log("==> Deploying via firebase-tools");
 run("firebase", ["deploy", "--project", projectId], join(repoRoot, "firebase"));
