@@ -26,6 +26,17 @@ if (firebaserc.includes("REPLACE_ME_FIREBASE_PROJECT_ID")) {
   process.exit(1);
 }
 
+// Resolve the project id from the root .firebaserc and pass it explicitly to
+// `firebase deploy`. The deploy runs from firebase/ (where firebase.json is),
+// and firebase-tools only reads .firebaserc from the current directory — it
+// does NOT walk up to the repo root — so without --project it reports
+// "No currently active project". Passing it removes that cwd dependency.
+const projectId = JSON.parse(firebaserc)?.projects?.default;
+if (!projectId) {
+  console.error("error: could not read projects.default from .firebaserc");
+  process.exit(1);
+}
+
 console.log("==> Building app/");
 run("npm", ["run", "build"], join(repoRoot, "app"));
 
@@ -40,6 +51,6 @@ rmSync(dest, { recursive: true, force: true });
 cpSync(dist, dest, { recursive: true });
 
 console.log("==> Deploying via firebase-tools");
-run("firebase", ["deploy"], join(repoRoot, "firebase"));
+run("firebase", ["deploy", "--project", projectId], join(repoRoot, "firebase"));
 
 console.log("==> Done.");
